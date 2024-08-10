@@ -1,11 +1,13 @@
+from pprint import pprint
 from ligify.predict.chemical2enzymes import fetch_reactions, fetch_genes, filter_genes
 from ligify.predict.enzymes2operons import pull_regulators
-from ligify.predict.accID2operon import acc2operon
+from ligify.predict.accID2operon import acc2operon, acc2MetaDataList, acc2operonList
 from ligify.predict.rank import calculate_rank
 
 
 def fetch_data(InChiKey, filters):
     metrics = {}
+    total_regs = 0
 
     # FETCH REACTIONS
     reactions = fetch_reactions(InChiKey = InChiKey, max_reactions = filters["max_reactions"])
@@ -33,28 +35,36 @@ def fetch_data(InChiKey, filters):
             print("No enzymes found")
             return None, None
         else:
-            operon_counter = 0
+            operon_list_entries = [] 
 
-            total_genes = 0
-            for rxn in range(0,len(reactions["rxn_data"])):
-                for i in range(0, len(reactions["rxn_data"][rxn]["proteins"])):
-                    protein = reactions["rxn_data"][rxn]["proteins"][i]
-                    if protein["enzyme"]["ncbi_id"] !=  None:
-                        total_genes +=1
+            for rxn in reactions['rxn_data']:
+                if rxn["proteins"]:
+                    proteins = rxn["proteins"]
+                    for entry in proteins:
+                        total_regs += 1
+                        refseq_id = entry["enzyme"]["ncbi_id"]
+                        if refseq_id != None:
+                            if len(operon_list_entries) <= filters["max_operons"]:
+                                operon_list_entries.append(refseq_id)
+                            else:
+                                break
 
-            for rxn in range(0,len(reactions["rxn_data"])):
-                for i in range(0, len(reactions["rxn_data"][rxn]["proteins"])):
-                    protein = reactions["rxn_data"][rxn]["proteins"][i]
-                    refseq_id = protein["enzyme"]["ncbi_id"]
-                    if refseq_id != None:
+            # for rxn in range(0,len(reactions["rxn_data"])):
+            #     for i in range(0, len(reactions["rxn_data"][rxn]["proteins"])):
+            #         protein = reactions["rxn_data"][rxn]["proteins"][i]
+            #         refseq_id = protein["enzyme"]["ncbi_id"]
+            #         if refseq_id != None:
 
-                        # Limit number of operons evaluated to avoid program taking too long to complete.
-                        if operon_counter <= filters["max_operons"]:
-                            protein["context"] = acc2operon(refseq_id)
-                            operon_counter += 1
+            #             # Limit number of operons evaluated to avoid program taking too long to complete.
+            #             if operon_counter <= filters["max_operons"]:
+            #                 prog_value = int(30+operon_counter*prog_bar_increment)
 
-            metrics["Total operons"] = operon_counter
-
+            #                 prog_bar.progress(prog_value, text=f"3. Fetching operon for gene {str(operon_counter+1)} of {str(total_genes)} ({refseq_id})")
+            #                 protein["context"] = acc2operon(refseq_id)
+            #                 operon_counter += 1
+            
+            # Consolidate operons into a single API call
+            metrics["Total operons"] = len(acc2MetaDataList(operon_list_entries))
 
             # FETCH REGULATORS
 
@@ -62,12 +72,6 @@ def fetch_data(InChiKey, filters):
                 return None, None
             
             else:
-                total_regs = 0
-                for rxn in reactions["rxn_data"]:
-                    for protein in rxn["proteins"]:
-                        total_regs += 1
-
-
                 # This is where all of the display data is created
                 counter = 0
                 regulators = []

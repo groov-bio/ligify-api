@@ -1,8 +1,11 @@
+from dotenv import load_dotenv
+
 from ligify.fetch_data import fetch_data
 from ligify.predict.pubchem import get_inchikey, get_name
 
 
 if __name__ == "__main__":
+    load_dotenv()
     smiles = "C=CC(=O)[O-]"
     chemical_name = get_name(smiles, "smiles")
     InChiKey = get_inchikey(smiles, "smiles")
@@ -25,5 +28,7 @@ if __name__ == "__main__":
 
     regulators, metrics = fetch_data(chemical['InChiKey'], filters)
 
-    print(regulators)
+
+    # {'RHEA Reactions': 5, 'Total genes': 8, 'Filtered genes': 4, 'Total operons': 4, 'Total regulators': 4}
+    # print(regulators)
     print(metrics)

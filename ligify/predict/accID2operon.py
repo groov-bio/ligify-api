@@ -1,18 +1,70 @@
+import copy
+import datetime
+import os
+from typing import List
 import requests
 import re
 from pprint import pprint
 import xmltodict
 import time
+import io
+import xml.etree.ElementTree as ET
 
 #TODO:
 # Return a legit error message for the frontend if an error comes up
 
-headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36'} 
+
+
+def acc2MetaDataList(access_ids: List[str]):
+    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}"
+    for id in access_ids:
+        base_url += f"&id={id}"
+    result = requests.get(base_url)
+    if result.status_code != 200:
+        print(result.json())
+        print("non-200 HTTP response. eFetch failed")
+
+    parsed = xmltodict.parse(result.text)
+
+    protein_list = {}
+
+    if "IPGReport" in parsed["IPGReportSet"].keys():
+        for entry in parsed["IPGReportSet"]["IPGReport"]:
+            if "ProteinList" in entry:
+                protein = entry["ProteinList"]["Protein"]
+            else:
+                return "EMPTY"
+
+            if isinstance(protein, list):
+                protein = protein[0]
+
+            if "CDSList" not in protein.keys():
+                return "EMPTY"
+
+            CDS = protein["CDSList"]["CDS"]
+
+                #CDS is a list if there is more than 1 CDS returned, otherwise it's a dictionary
+            if isinstance(CDS, list):
+                CDS = CDS[0]
+
+            proteinDict = {
+                "accver":CDS["@accver"],
+                "start":CDS["@start"],
+                "stop":CDS["@stop"],
+                "strand":CDS["@strand"],
+            }
+
+            protein_list[entry["@product_acc"]] = proteinDict
+    else:
+        return "EMPTY"
+
+    return protein_list
+
 
 def acc2MetaData(access_id: str):
-    
-    result = requests.get(f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg")
+    result = requests.get(f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}")
     if result.status_code != 200:
+            print(result.json())
             print("non-200 HTTP response. eFetch failed")
 
     parsed = xmltodict.parse(result.text)
@@ -158,15 +210,12 @@ def NC2genome(genome_id, operon):
 
         return out, genome_reassembly_match
 
-
-
-
-
 def getGenes(genome_id, startPos, stopPos):
 
     # Fetch the genome fragment
     base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore"
     try:
+        print('url' + base_url+"&id="+str(genome_id)+"&seq_start="+str(startPos-10000)+"&seq_stop="+str(stopPos+10000)+"&rettype=fasta_cds_aa")
         response = requests.get(base_url+"&id="+str(genome_id)+"&seq_start="+str(startPos-10000)+"&seq_stop="+str(stopPos+10000)+"&rettype=fasta_cds_aa")
         genome = response.text.split("\n")
     except:
@@ -195,6 +244,7 @@ def getGenes(genome_id, startPos, stopPos):
             if i[0] == '>':
                 if re1.search(i):
                     if re2.search(i):
+                        print('found match')
                         regIndex = geneIndex
                 geneIndex += 1
                 genes.append(i)
@@ -203,10 +253,6 @@ def getGenes(genome_id, startPos, stopPos):
         return None, None
     else:
         return genes, regIndex
-
-
-
-
 
 def fasta2MetaData(fasta):
     metaData = {}
@@ -237,10 +283,6 @@ def fasta2MetaData(fasta):
         metaData['accession'] = ""
     
     return metaData
-
-
-
-
 
 def getOperon(allGenes, index, seq_start, strand):
     '''
@@ -316,9 +358,6 @@ def getOperon(allGenes, index, seq_start, strand):
 
 
     return geneArray, regulatorIndex
-
-
-
 
 def predict_promoter(operon, regIndex, genome_id):
 
@@ -405,7 +444,41 @@ def predict_promoter(operon, regIndex, genome_id):
 
 
 
+def acc2operonList(operon_list_entries):
+    metaData = acc2MetaDataList(operon_list_entries)
+    operon_dict = {}
 
+    for key, value in metaData.items():
+        genes, index = getGenes(value['accver'], int(value['start']), int(value['stop']))
+        print(index)
+
+    # for id in metaData:
+    #     current = metaData[id]
+    #     if current != "EMPTY":
+    #         genes, index = getGenes(current['accver'], int(current["start"]), int(current['stop'])) 
+    #         if index != None:
+                # enzyme = fasta2MetaData(genes[index])
+
+                # operon, regIndex = getOperon(genes, index, enzyme['start'], enzyme['direction'])
+                # operon_sequence, reassembly_match = NC2genome(current["accver"], operon)
+                # promoter = predict_promoter(operon, regIndex, current["accver"])
+
+                # data = {
+                #     "operon": operon, 
+                #     "enzyme_index": regIndex, 
+                #     "enzyme_direction": enzyme["direction"],
+                #     "operon_seq": operon_sequence, 
+                #     "promoter": promoter,  
+                #     "reassembly_match": reassembly_match,
+                #     "genome": current["accver"],
+                #     }
+                
+                # operon_dict[id] = data
+    #         else:
+    #             operon_dict[id] = "EMPTY"
+    #     else:
+    #         operon_dict[id] = "EMPTY"
+    # return operon_dict
 
 def acc2operon(accession):
 
@@ -442,8 +515,16 @@ def acc2operon(accession):
 
 
 if __name__ == "__main__":
-    
-    pprint(acc2operon("WP_187140699.1"))
+    # metaData = acc2MetaData('WP_011046214.1')
+
+    # if metaData != "EMPTY":
+    #     genes, index = getGenes(metaData["accver"], int(metaData["start"]), int(metaData["stop"]))
+    #     print(genes)
+    #     print(index)
+    # print(acc2operon('WP_011046214.1'))
+    acc2operonList(['WP_011046214.1', 'ADT64689.1', 'WP_011336734.1','WP_069687654.1']) 
+    # acc2operonList(['WP_011046214.1', 'WP_011336734.1']) 
+    # pprint(acc2operonList(['WP_069687654.1', 'WP_011046214.1', 'ADT64689.1', 'WP_011336734.1']))
 
 
 
