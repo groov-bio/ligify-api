@@ -1,10 +1,6 @@
-numpy
-Pillow
 pandas
-urllib3
 requests
 xmltodict
-openpyxl
 rdkit
 libChEBIpy
 biopython
