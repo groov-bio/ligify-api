@@ -5,7 +5,6 @@ urllib3
 requests
 xmltodict
 openpyxl
-streamlit-ketcher
 rdkit
 libChEBIpy
 biopython

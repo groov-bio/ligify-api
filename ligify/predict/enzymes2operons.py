@@ -10,9 +10,6 @@ def protein2chemicals(accession: str):
     if response.ok:
         protein = json.loads(response.text)
 
-        ligand_names = []
-        ligand_ids = []
-
         if len(protein['results']) > 0:
             if "comments" in protein["results"][0]:
                 protein = protein["results"][0]["comments"]
@@ -20,46 +17,40 @@ def protein2chemicals(accession: str):
                 protein_data = {}
 
                     # look for description
-                Function = [i["texts"][0]["value"] for i in protein if i["commentType"] == "FUNCTION"]
-                if len(Function) != 0:
-                    protein_data["function"] = Function[0]
+                response_function = [i["texts"][0]["value"] for i in protein if i["commentType"] == "FUNCTION"]
+                if len(response_function) != 0:
+                    protein_data["function"] = response_function[0]
         
 
                     # look for catalytic activity
-                CATALYSIS = [i["reaction"]["name"] for i in protein if i["commentType"] == "CATALYTIC ACTIVITY"]
-                if len(CATALYSIS) != 0:
-                    protein_data["catalysis"] = CATALYSIS[0]
+                catalysis = [i["reaction"]["name"] for i in protein if i["commentType"] == "CATALYTIC ACTIVITY"]
+                if len(catalysis) != 0:
+                    protein_data["catalysis"] = catalysis[0]
                     
 
-                    # look for catalytic activity
+                    # look for ligands 
                 try:
-                    RXN = [i["reaction"]["reactionCrossReferences"] for i in protein if i["commentType"] == "CATALYTIC ACTIVITY"]
-                    if len(RXN) != 0:
-                        LIGANDS = [i["id"] for i in RXN[0] if i["database"] == "ChEBI"]
+                    reaction = [i["reaction"]["reactionCrossReferences"] for i in protein if i["commentType"] == "CATALYTIC ACTIVITY"]
+                    if len(reaction) != 0:
+                        LIGANDS = [i["id"] for i in reaction[0] if i["database"] == "ChEBI"]
                         if len(LIGANDS) != 0:
                             protein_data["ligands"] = LIGANDS
                 except:
                     pass
 
                     # look for induction
-                INDUCTION = [i["texts"][0]["value"] for i in protein if i["commentType"] == "INDUCTION"]
-                if len(INDUCTION) != 0:
-                    protein_data["induction"] = INDUCTION[0]
+                induction = [i["texts"][0]["value"] for i in protein if i["commentType"] == "INDUCTION"]
+                if len(induction) != 0:
+                    protein_data["induction"] = induction[0]
 
-                            # look for induction
-                PATHWAY = [i["texts"][0]["value"] for i in protein if i["commentType"] == "PATHWAY"]
-                if len(PATHWAY) != 0:
-                    protein_data["pathway"] = PATHWAY[0]
+                    # look for induction
+                pathway = [i["texts"][0]["value"] for i in protein if i["commentType"] == "PATHWAY"]
+                if len(pathway) != 0:
+                    protein_data["pathway"] = pathway[0]
 
 
                 # add something to append all this metadata
-
-
                 
-                # try:
-                #     pprint(protein_data["catalysis"])
-                # except:
-                #     pass
                 return(protein_data)
     else:
         response.raise_for_status()
@@ -153,8 +144,6 @@ def pull_regulators(protein, rxn):
 
                         entry['alt_ligands'] = unique_ligands
 
-
-
                         reg_data.append(entry)
 
                 
@@ -165,18 +154,4 @@ def pull_regulators(protein, rxn):
 
 
 if __name__ == "__main__":
-
-    fetch_ncbi_reg_data("ACP17972.1")
-
-    # with open("temp/all.json", "r") as f:
-    #     all_chemicals = json.load(f)
-
-    #     for chemical in all_chemicals:
-    #         print(chemical)
-            # data = json.load(f)
-
-            # regs = pull_regulators(data)
-
-            # #print(regs)
-            # d = pd.DataFrame(regs)
-            # print(d)
+    pass

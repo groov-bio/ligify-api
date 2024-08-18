@@ -13,98 +13,6 @@ import xml.etree.ElementTree as ET
 #TODO:
 # Return a legit error message for the frontend if an error comes up
 
-
-
-def acc2MetaDataList(access_ids: List[str]):
-    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}"
-    for id in access_ids:
-        base_url += f"&id={id}"
-    result = requests.get(base_url)
-    if result.status_code != 200:
-        print(result.json())
-        print("non-200 HTTP response. eFetch failed")
-
-    parsed = xmltodict.parse(result.text)
-
-    protein_list = {}
-
-    if "IPGReport" in parsed["IPGReportSet"].keys():
-        for entry in parsed["IPGReportSet"]["IPGReport"]:
-            if "ProteinList" in entry:
-                protein = entry["ProteinList"]["Protein"]
-            else:
-                return "EMPTY"
-
-            if isinstance(protein, list):
-                protein = protein[0]
-
-            if "CDSList" not in protein.keys():
-                return "EMPTY"
-
-            CDS = protein["CDSList"]["CDS"]
-
-                #CDS is a list if there is more than 1 CDS returned, otherwise it's a dictionary
-            if isinstance(CDS, list):
-                CDS = CDS[0]
-
-            proteinDict = {
-                "accver":CDS["@accver"],
-                "start":CDS["@start"],
-                "stop":CDS["@stop"],
-                "strand":CDS["@strand"],
-            }
-
-            protein_list[entry["@product_acc"]] = proteinDict
-    else:
-        return "EMPTY"
-
-    return protein_list
-
-
-def acc2MetaData(access_id: str):
-    result = requests.get(f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}")
-    if result.status_code != 200:
-            print(result.json())
-            print("non-200 HTTP response. eFetch failed")
-
-    parsed = xmltodict.parse(result.text)
-
-    if "IPGReport" in parsed["IPGReportSet"].keys():
-        if "ProteinList" in parsed["IPGReportSet"]["IPGReport"]:
-            protein = parsed["IPGReportSet"]["IPGReport"]["ProteinList"]["Protein"]
-
-            if isinstance(protein, list):
-                protein = protein[0]
-
-            if "CDSList" not in protein.keys():
-                return "EMPTY"
-
-            CDS = protein["CDSList"]["CDS"]
-
-                #CDS is a list if there is more than 1 CDS returned, otherwise it's a dictionary
-            if isinstance(CDS, list):
-                CDS = CDS[0]
-
-            proteinDict = {
-                "accver":CDS["@accver"],
-                "start":CDS["@start"],
-                "stop":CDS["@stop"],
-                "strand":CDS["@strand"],
-            }
-
-            return proteinDict
-        else:
-            return "EMPTY"
-    else:
-        return "EMPTY"
-
-
-
-
-
-
-
-
     # OLD VERSION
 
 # def NC2genome(genome_id, startPos, stopPos):
@@ -215,7 +123,6 @@ def getGenes(genome_id, startPos, stopPos):
     # Fetch the genome fragment
     base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore"
     try:
-        print('url' + base_url+"&id="+str(genome_id)+"&seq_start="+str(startPos-10000)+"&seq_stop="+str(stopPos+10000)+"&rettype=fasta_cds_aa")
         response = requests.get(base_url+"&id="+str(genome_id)+"&seq_start="+str(startPos-10000)+"&seq_stop="+str(stopPos+10000)+"&rettype=fasta_cds_aa")
         genome = response.text.split("\n")
     except:
@@ -232,6 +139,7 @@ def getGenes(genome_id, startPos, stopPos):
                     genome = response.text.split("\n")
                 except:
                     print("error fetching the genome fragment")
+                    return None, None
 
 
     re1 = re.compile(str(startPos))
@@ -443,42 +351,128 @@ def predict_promoter(operon, regIndex, genome_id):
          # A region too long makes analysis fuzzy and less accurate.
 
 
+def acc2MetaDataList(access_ids):
+    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}"
+    for id in access_ids.keys():
+        base_url += f"&id={id}"
 
-def acc2operonList(operon_list_entries):
+    result = requests.get(base_url)
+    if result.status_code != 200:
+        print(result.json())
+        print("non-200 HTTP response. eFetch failed")
+
+    parsed = xmltodict.parse(result.text)
+
+    if "IPGReport" in parsed["IPGReportSet"].keys():
+        for entry in parsed["IPGReportSet"]["IPGReport"]:
+
+            if "ProteinList" in entry:
+                protein = entry["ProteinList"]["Protein"]
+            else:
+                access_ids[entry["@product_acc"]] = None
+
+            if isinstance(protein, list):
+                protein = protein[0]
+
+            if "CDSList" not in protein.keys():
+                access_ids[entry["@product_acc"]] = None
+
+            CDS = protein["CDSList"]["CDS"]
+
+                #CDS is a list if there is more than 1 CDS returned, otherwise it's a dictionary
+            if isinstance(CDS, list):
+                CDS = CDS[0]
+
+            proteinDict = {
+                "accver":CDS["@accver"],
+                "start":CDS["@start"],
+                "stop":CDS["@stop"],
+                "strand":CDS["@strand"],
+            }
+
+            access_ids[entry["@product_acc"]] = proteinDict
+    else:
+        # TODO - handle error
+        raise Exception('No IPGReport')
+
+    return access_ids
+
+
+def acc2MetaData(access_id: str):
+    result = requests.get(f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}")
+    if result.status_code != 200:
+            print(result.json())
+            print("non-200 HTTP response. eFetch failed")
+
+    parsed = xmltodict.parse(result.text)
+
+    if "IPGReport" in parsed["IPGReportSet"].keys():
+        if "ProteinList" in parsed["IPGReportSet"]["IPGReport"]:
+            protein = parsed["IPGReportSet"]["IPGReport"]["ProteinList"]["Protein"]
+
+            if isinstance(protein, list):
+                protein = protein[0]
+
+            if "CDSList" not in protein.keys():
+                return "EMPTY"
+
+            CDS = protein["CDSList"]["CDS"]
+
+                #CDS is a list if there is more than 1 CDS returned, otherwise it's a dictionary
+            if isinstance(CDS, list):
+                CDS = CDS[0]
+
+            proteinDict = {
+                "accver":CDS["@accver"],
+                "start":CDS["@start"],
+                "stop":CDS["@stop"],
+                "strand":CDS["@strand"],
+            }
+
+            return proteinDict
+        else:
+            return "EMPTY"
+    else:
+        return "EMPTY"
+
+
+def acc2OperonList(operon_list_entries):
     metaData = acc2MetaDataList(operon_list_entries)
     operon_dict = {}
 
     for key, value in metaData.items():
-        genes, index = getGenes(value['accver'], int(value['start']), int(value['stop']))
-        print(index)
+        if value != None:
+            print(value)
+            genes, index = getGenes(value['accver'], int(value['start']), int(value['stop']))
 
-    # for id in metaData:
-    #     current = metaData[id]
-    #     if current != "EMPTY":
-    #         genes, index = getGenes(current['accver'], int(current["start"]), int(current['stop'])) 
-    #         if index != None:
-                # enzyme = fasta2MetaData(genes[index])
+            if index != None:
+                enzyme = fasta2MetaData(genes[index])
 
-                # operon, regIndex = getOperon(genes, index, enzyme['start'], enzyme['direction'])
-                # operon_sequence, reassembly_match = NC2genome(current["accver"], operon)
-                # promoter = predict_promoter(operon, regIndex, current["accver"])
+                operon, regIndex = getOperon(genes, index, enzyme['start'], enzyme['direction'])
+                operon_sequence, reassembly_match = NC2genome(value["accver"], operon)
+                promoter = predict_promoter(operon, regIndex, value["accver"])
 
-                # data = {
-                #     "operon": operon, 
-                #     "enzyme_index": regIndex, 
-                #     "enzyme_direction": enzyme["direction"],
-                #     "operon_seq": operon_sequence, 
-                #     "promoter": promoter,  
-                #     "reassembly_match": reassembly_match,
-                #     "genome": current["accver"],
-                #     }
+                data = {
+                    "operon": operon, 
+                    "enzyme_index": regIndex, 
+                    "enzyme_direction": enzyme["direction"],
+                    "operon_seq": operon_sequence, 
+                    "promoter": promoter,  
+                    "reassembly_match": reassembly_match,
+                    "genome": value["accver"],
+                    }
                 
-                # operon_dict[id] = data
-    #         else:
-    #             operon_dict[id] = "EMPTY"
-    #     else:
-    #         operon_dict[id] = "EMPTY"
-    # return operon_dict
+                    # OLD
+                #data = {"operon": operon, "enzyme_index": regIndex, "genome": metaData["accver"] }
+                
+                operon_dict[key] = data
+            else:
+                operon_dict[key] = "EMPTY"
+        else:
+            operon_dict[key] = "EMPTY"
+
+    return operon_dict
+
 
 def acc2operon(accession):
 
@@ -521,8 +515,11 @@ if __name__ == "__main__":
     #     genes, index = getGenes(metaData["accver"], int(metaData["start"]), int(metaData["stop"]))
     #     print(genes)
     #     print(index)
+
+    print(acc2MetaDataList(['WP_011046214.1']))
+
     # print(acc2operon('WP_011046214.1'))
-    acc2operonList(['WP_011046214.1', 'ADT64689.1', 'WP_011336734.1','WP_069687654.1']) 
+    # acc2operonList(['WP_011046214.1', 'ADT64689.1', 'WP_011336734.1','WP_069687654.1']) 
     # acc2operonList(['WP_011046214.1', 'WP_011336734.1']) 
     # pprint(acc2operonList(['WP_069687654.1', 'WP_011046214.1', 'ADT64689.1', 'WP_011336734.1']))
 
