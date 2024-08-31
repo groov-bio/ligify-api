@@ -10,6 +10,8 @@ def get_inchikey(input, prop):
                 # get the first entry
             out = response.text.split("\n")[0]
             return out
+        else:
+            raise Exception(f'Unable to get inchikey for {input} of type {prop}')
 
     elif prop == "smiles":
         URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/"+str(input)+"/property/InChiKey/TXT"
@@ -19,6 +21,8 @@ def get_inchikey(input, prop):
                 # get the first entry
             out = response.text.split("\n")[0]
             return out
+        else:
+            raise Exception(f'Unable to get inchikey for {input} of type {prop}')
      
 
 def get_smiles(input):
@@ -41,6 +45,8 @@ def get_name(input, prop):
                 # get the first entry
             out = response.text.split("\n")[0]
             return out
+        else:
+            raise Exception(f'Unable to get name for {input} of type {prop}')
 
     elif prop == "inchikey":
         URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/InChiKey/"+str(input)+"/property/IUPACname/TXT"
@@ -49,6 +55,8 @@ def get_name(input, prop):
                 # get the first entry
             out = response.text.split("\n")[0]
             return out
+        else:
+            raise Exception(f'Unable to get name for {input} of type {prop}')
 
 def check_url(url):
 
