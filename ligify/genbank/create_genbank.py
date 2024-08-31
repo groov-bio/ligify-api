@@ -1,21 +1,15 @@
-from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
-from Bio.GenBank.Record import Record
 
-from tempfile import NamedTemporaryFile
-
-from ligify.genbank.annotations import get_annotations, get_plasmid_components
-from ligify.genbank.codon_optimize import codon_opt
-
-
-
+from genbank.annotations import get_annotations, get_plasmid_components
+# from genbank.codon_optimize import codon_opt
 
 def create_genbank(regulator_name, ligand_name, promoter_seq, regulator_protein_seq):
     
     # Codon optimize the natural sequence
-    opt_regulator_seq = codon_opt(regulator_protein_seq)
+    # opt_regulator_seq = codon_opt(regulator_protein_seq)
+    opt_regulator_seq = {}
 
     # Create the plasmid sequence record
     plasmid_components = get_plasmid_components()
@@ -35,43 +29,43 @@ def create_genbank(regulator_name, ligand_name, promoter_seq, regulator_protein_
     record.annotations["topology"] = "circular"
 
     # Add annotations
-    annotations = get_annotations(promoter_seq, opt_regulator_seq, regulator_name, regulator_protein_seq)
-    for annotation in annotations:
-        if "translation" in annotation.keys():
-            record.features.append(\
-                SeqFeature(FeatureLocation(\
-                    start = annotation["start"], \
-                    end = annotation["end"], \
-                    strand = annotation["strand"]), \
-                    type = annotation["type"], \
-                    qualifiers={ \
-                        "ApEinfo_fwdcolor":[annotation["color"]],\
-                        "translation":[annotation["translation"]],\
-                        "label": annotation["label"]}))
-        else:
-            record.features.append(\
-                SeqFeature(FeatureLocation(\
-                    start = annotation["start"], \
-                    end = annotation["end"], \
-                    strand = annotation["strand"]), \
-                    type = annotation["type"], \
-                    qualifiers={ \
-                        "ApEinfo_fwdcolor":[annotation["color"]],\
-                        "label": annotation["label"]}))
+    # annotations = get_annotations(promoter_seq, opt_regulator_seq, regulator_name, regulator_protein_seq)
+    # for annotation in annotations:
+    #     if "translation" in annotation.keys():
+    #         record.features.append(\
+    #             SeqFeature(FeatureLocation(\
+    #                 start = annotation["start"], \
+    #                 end = annotation["end"], \
+    #                 strand = annotation["strand"]), \
+    #                 type = annotation["type"], \
+    #                 qualifiers={ \
+    #                     "ApEinfo_fwdcolor":[annotation["color"]],\
+    #                     "translation":[annotation["translation"]],\
+    #                     "label": annotation["label"]}))
+    #     else:
+    #         record.features.append(\
+    #             SeqFeature(FeatureLocation(\
+    #                 start = annotation["start"], \
+    #                 end = annotation["end"], \
+    #                 strand = annotation["strand"]), \
+    #                 type = annotation["type"], \
+    #                 qualifiers={ \
+    #                     "ApEinfo_fwdcolor":[annotation["color"]],\
+    #                     "label": annotation["label"]}))
 
 
-    # Converts gbk into straight text
-    def get_gbk(record):
-        outfileloc=NamedTemporaryFile()
-        with open(outfileloc.name, "w") as handle:
-            SeqIO.write(record, handle, "genbank")
-        with open(outfileloc.name) as handle:
-            record=handle.read()
-        outfileloc.close()
+    # # Converts gbk into straight text
+    # def get_gbk(record):
+    #     outfileloc=NamedTemporaryFile()
+    #     with open(outfileloc.name, "w") as handle:
+    #         SeqIO.write(record, handle, "genbank")
+    #     with open(outfileloc.name) as handle:
+    #         record=handle.read()
+    #     outfileloc.close()
 
-        return record
+    #     return record
 
-    # record = get_gbk(record)
+    # # record = get_gbk(record)
     
     return record.seq
 

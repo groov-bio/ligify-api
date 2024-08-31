@@ -164,3 +164,7 @@ cython_debug/
 **/.DS_Store
 
 ligify_venv
+ligify-venv-v2
+layers/python
+.aws-sam
+env.local.json

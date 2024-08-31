@@ -1,8 +1,8 @@
 from pprint import pprint
-from ligify.predict.chemical2enzymes import fetch_reactions, fetch_genes, filter_genes
-from ligify.predict.enzymes2operons import pull_regulators
-from ligify.predict.accID2operon import acc2operon, acc2MetaDataList, acc2OperonList
-from ligify.predict.rank import calculate_rank
+from predict.chemical2enzymes import fetch_reactions, fetch_genes, filter_genes
+from predict.enzymes2operons import pull_regulators
+from predict.accID2operon import acc2operon, acc2MetaDataList, acc2OperonList
+from predict.rank import calculate_rank
 
 def fetch_data(InChiKey, filters):
     metrics = {}

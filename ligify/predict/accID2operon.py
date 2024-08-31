@@ -351,6 +351,7 @@ def predict_promoter(operon, regIndex, genome_id):
 
 
 def acc2MetaDataList(access_ids):
+    print(os.getenv('NCBI_API_KEY'))
     base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}"
     for id in access_ids.keys():
         base_url += f"&id={id}"
