@@ -23,13 +23,16 @@ def fetch_reactions(InChiKey: str, max_reactions: int):
     }
     response = requests.get(url,params=parameter)
 
-    data = json.loads(response.text)["results"]
+    if response.ok:
+        data = json.loads(response.text)["results"]
 
-    # Not all Rhea IDs have EC numbers associated with them (strangely)
-    output = {}
-    output["rxn_data"] = [{"rhea_id": i["id"], "equation": i["equation"]} for i in data][0:max_reactions]
+        # Not all Rhea IDs have EC numbers associated with them (strangely)
+        output = {}
+        output["rxn_data"] = [{"rhea_id": i["id"], "equation": i["equation"]} for i in data][0:max_reactions]
 
-    return output
+        return output
+    else:
+        raise Exception(f'Unable to fetch reactions for {InChiKey}')
 
 
 
@@ -44,55 +47,59 @@ def fetch_genes(rhea_id, reviewed_bool, proteins_per_reaction):
     # Loop through all RHEA reactions associated with the input chemical.
 
     response = requests.get(url+str(rhea_id))
-    data = json.loads(response.text)["results"]   
 
-    proteins = []
-    
-    for entry in data:
-        if entry["organism"]["lineage"][0] == "Bacteria":
+    if response.ok:
+        data = json.loads(response.text)["results"]   
 
-            # Get reference DOIs
-            try:
-                description = entry["proteinDescription"]["recommendedName"]["fullName"]["value"]
-                dois = []
-                for j in entry['references']:
-                    if "citationCrossReferences" in j["citation"]:
-                        for k in j["citation"]["citationCrossReferences"]:
-                            if k["database"] == "DOI":
-                                dois.append(k["id"])
-            except:
-                description = None
-                dois= []
+        proteins = []
+        
+        for entry in data:
+            if entry["organism"]["lineage"][0] == "Bacteria":
 
-            # Get RefSeq ID
-            # The "NCBI_ID" is needed to get the genome context in the next step. Prefer to use RefSeq, but can use EMBL.
-            try:
-                ncbi_id = [e["id"] for e in entry["uniProtKBCrossReferences"] if e["database"] == "RefSeq"][0]
-            except:
+                # Get reference DOIs
                 try:
-                    ncbi_id = [e["properties"] for e in entry["uniProtKBCrossReferences"] if e["database"] == "EMBL"][0]
-                    ncbi_id = [e["value"] for e in ncbi_id if e["key"] == "ProteinId"][0]
+                    description = entry["proteinDescription"]["recommendedName"]["fullName"]["value"]
+                    dois = []
+                    for j in entry['references']:
+                        if "citationCrossReferences" in j["citation"]:
+                            for k in j["citation"]["citationCrossReferences"]:
+                                if k["database"] == "DOI":
+                                    dois.append(k["id"])
                 except:
-                    ncbi_id = None
-                    print("no ncbi id retrived")
+                    description = None
+                    dois= []
 
-            # Get Uniprot ID and Organism
-            uniprotID = entry["primaryAccession"]
-            organism = entry["organism"]["lineage"]
+                # Get RefSeq ID
+                # The "NCBI_ID" is needed to get the genome context in the next step. Prefer to use RefSeq, but can use EMBL.
+                try:
+                    ncbi_id = [e["id"] for e in entry["uniProtKBCrossReferences"] if e["database"] == "RefSeq"][0]
+                except:
+                    try:
+                        ncbi_id = [e["properties"] for e in entry["uniProtKBCrossReferences"] if e["database"] == "EMBL"][0]
+                        ncbi_id = [e["value"] for e in ncbi_id if e["key"] == "ProteinId"][0]
+                    except:
+                        ncbi_id = None
+                        print("no ncbi id retrived")
 
-            # Format protein data into a dictionary
-            protein = {
-                "organism": organism,
-                "enzyme": {
-                    "description": description,
-                    "uniprot_id": uniprotID,
-                    "dois": dois,
-                    "ncbi_id": ncbi_id,
+                # Get Uniprot ID and Organism
+                uniprotID = entry["primaryAccession"]
+                organism = entry["organism"]["lineage"]
+
+                # Format protein data into a dictionary
+                protein = {
+                    "organism": organism,
+                    "enzyme": {
+                        "description": description,
+                        "uniprot_id": uniprotID,
+                        "dois": dois,
+                        "ncbi_id": ncbi_id,
+                    }
                 }
-            }
-            proteins.append(protein)
-    
-    return proteins
+                proteins.append(protein)
+        
+        return proteins
+    else:
+        raise Exception(f'Unable to fetch genes for {rhea_id}')
 
 
 

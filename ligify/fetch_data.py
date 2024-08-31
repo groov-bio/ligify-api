@@ -31,7 +31,7 @@ def fetch_data(InChiKey, filters):
         # FETCH OPERONS
         if len(reactions["rxn_data"]) == 0:
             print("No enzymes found")
-            return None, None
+            raise Exception(f'No enzymes found for {InChiKey}')
         else:
             # operon_counter = 0
             operon_list_entries = {}
@@ -95,11 +95,11 @@ def fetch_data(InChiKey, filters):
 
 
                 if filtered_regulators == None or len(filtered_regulators) == 0:
-                    return None, None
+                    raise Exception(f'No regulators found for {InChiKey}')
                 else:
                     return filtered_regulators, metrics
 
 
     else:
-        return None, None
+        raise Exception(f'No reaction data found for {InChiKey}')
 

@@ -62,23 +62,12 @@ def download_df(ligand_name, genbank_con):
 
 
 
-def format_results(data_column, ligand_name):
+def format_results(ligand_name):
 
     if st.session_state.data:
 
         # Header
         refseq = st.session_state.data['refseq']
-        data_column.write("")
-        data_column.write("")
-        data_column.markdown(f'<h1 style="text-align: center; color: black; margin-top: -50px;">{refseq}</h1>', unsafe_allow_html=True)
-
-        data_column.divider()
-
-
-        # Spacer
-        data_column.text("")
-        data_column.text("")
-
 
         # Regulator info
         reg_ncbi_anno = st.session_state.data["annotation"]
@@ -95,11 +84,6 @@ def format_results(data_column, ligand_name):
             "Organism": organism_name,
         }
         
-            #Regulator container
-        regulator_con = data_column.container()
-
-            #GenBank container
-        genbank_con = data_column.container()   
 
         reg_info, reg_spacer, reg_genbank = regulator_con.columns((8,1,5))
         regulator_df = pd.DataFrame(reg_json, index=["name"]).astype(str)

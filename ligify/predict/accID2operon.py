@@ -152,7 +152,6 @@ def getGenes(genome_id, startPos, stopPos):
             if i[0] == '>':
                 if re1.search(i):
                     if re2.search(i):
-                        print('found match')
                         regIndex = geneIndex
                 geneIndex += 1
                 genes.append(i)
@@ -442,7 +441,6 @@ def acc2OperonList(operon_list_entries):
 
     for key, value in metaData.items():
         if value != None:
-            print(value)
             genes, index = getGenes(value['accver'], int(value['start']), int(value['stop']))
 
             if index != None:
