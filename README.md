@@ -9,6 +9,7 @@ Following the successful release of a web tool for Ligify, the development team 
 
 In order to run Ligify locally, you need the following:
 
+- [docker](https://docs.docker.com/engine/install/)
 - [aws-sam-cli](https://github.com/aws/aws-sam-cli)
 - [Visual Studio Code](https://code.visualstudio.com/download) or your favorite text editor
 
@@ -40,6 +41,8 @@ In order to run Ligify locally, you have two options:
 - `sam build && concurrently "nodemon --on-change-only --ext py --exec sam build" "sam local start-api --env-vars env.local.json"`
 
 Refer to issue [#921](https://github.com/aws/aws-sam-cli/issues/921) for more information
+
+You'll know it's ready to use locally when the output contains `Running on http://127.0.0.1:3000`
 
 # Venv
 
