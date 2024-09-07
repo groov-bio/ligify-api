@@ -1,0 +1,8 @@
+requests
+xmltodict
+biopython
+dnachisel
+python-dotenv
+marshmallow
+numpy
+ruff

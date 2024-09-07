@@ -1,70 +1,89 @@
 import requests
 
-def get_inchikey(input, prop):
 
+def get_inchikey(input, prop):
     if prop == "name":
-        URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"+str(input)+"/property/InChiKey/TXT"
+        URL = (
+            "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"
+            + str(input)
+            + "/property/InChiKey/TXT"
+        )
 
         response = requests.get(URL)
         if response.ok:
-                # get the first entry
+            # get the first entry
             out = response.text.split("\n")[0]
             return out
         else:
-            raise Exception(f'Unable to get inchikey for {input} of type {prop}')
+            raise Exception(f"Unable to get inchikey for {input} of type {prop}")
 
     elif prop == "smiles":
-        URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/"+str(input)+"/property/InChiKey/TXT"
+        URL = (
+            "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/"
+            + str(input)
+            + "/property/InChiKey/TXT"
+        )
 
         response = requests.get(URL)
         if response.ok:
-                # get the first entry
+            # get the first entry
             out = response.text.split("\n")[0]
             return out
         else:
-            raise Exception(f'Unable to get inchikey for {input} of type {prop}')
-     
+            raise Exception(f"Unable to get inchikey for {input} of type {prop}")
+
 
 def get_smiles(input):
-
-    URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"+str(input)+"/property/CanonicalSMILES/TXT"
+    URL = (
+        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"
+        + str(input)
+        + "/property/CanonicalSMILES/TXT"
+    )
     response = requests.get(URL)
     if response.ok:
-            # get the first entry
+        # get the first entry
         out = response.text.split("\n")[0]
         return out
 
 
 def get_name(input, prop):
-
     if prop == "smiles":
         input = input.replace("\\", "")
-        URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/SMILES/"+str(input)+"/property/IUPACname/TXT"
+        URL = (
+            "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/SMILES/"
+            + str(input)
+            + "/property/IUPACname/TXT"
+        )
         response = requests.get(URL)
         if response.ok:
-                # get the first entry
+            # get the first entry
             out = response.text.split("\n")[0]
             return out
         else:
-            raise Exception(f'Unable to get name for {input} of type {prop}')
+            raise Exception(f"Unable to get name for {input} of type {prop}")
 
     elif prop == "inchikey":
-        URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/InChiKey/"+str(input)+"/property/IUPACname/TXT"
+        URL = (
+            "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/InChiKey/"
+            + str(input)
+            + "/property/IUPACname/TXT"
+        )
         response = requests.get(URL)
         if response.ok:
-                # get the first entry
+            # get the first entry
             out = response.text.split("\n")[0]
             return out
         else:
-            raise Exception(f'Unable to get name for {input} of type {prop}')
+            raise Exception(f"Unable to get name for {input} of type {prop}")
+
 
 def check_url(url):
-
     response = requests.get(url)
     if response.ok:
         return True
     else:
         return False
+
 
 if __name__ == "__main__":
     # out = get_inchiKey("isovalerate", "name")
@@ -78,5 +97,5 @@ if __name__ == "__main__":
 
     print(get_name("CC=CC1=CC(=C(C=C1)O)OC"))
 
-    #out = check_url("http://hulab.rxnfinder.org/smi2img/3")
-    #print(out)
+    # out = check_url("http://hulab.rxnfinder.org/smi2img/3")
+    # print(out)

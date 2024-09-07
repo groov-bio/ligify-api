@@ -45,9 +45,6 @@ if __name__ == "__main__":
         #     print(regulator['refseq'])
         with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(regulators, f, ensure_ascii=False, indent=4)
-        # pprint(regulators)
-        # format_results(data_column, chemical["name"])
-        # {'RHEA Reactions': 5, 'Total genes': 8, 'Filtered genes': 4, 'Total operons': 4, 'Total regulators': 4}
         print(metrics)
     except Exception as e:
         print(e)
