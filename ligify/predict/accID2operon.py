@@ -351,14 +351,12 @@ def predict_promoter(operon, regIndex, genome_id):
 
 
 def acc2MetaDataList(access_ids):
-    print(os.getenv('NCBI_API_KEY'))
     base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}"
     for id in access_ids.keys():
         base_url += f"&id={id}"
 
     result = requests.get(base_url)
     if result.status_code != 200:
-        print(result.json())
         print("non-200 HTTP response. eFetch failed")
 
     parsed = xmltodict.parse(result.text)
@@ -401,7 +399,6 @@ def acc2MetaDataList(access_ids):
 def acc2MetaData(access_id: str):
     result = requests.get(f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NCBI_API_KEY')}")
     if result.status_code != 200:
-            print(result.json())
             print("non-200 HTTP response. eFetch failed")
 
     parsed = xmltodict.parse(result.text)

@@ -16,24 +16,15 @@ Globals:
     LoggingConfig:
       LogFormat: JSON
 Resources:
-  LambdaLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: Ligify-Layer
-      ContentUri: layers/
-      CompatibleRuntimes:
-        - python3.12
   LigifyFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ligify/
       Handler: main.lambda_handler
-      Runtime: python3.12
+      Runtime: python3.11
       Environment:
         Variables:
           NCBI_API_KEY: !Ref NCBI_API_KEY
-      Layers:
-        - !Ref LambdaLayer
       Architectures:
         - arm64
       Events:

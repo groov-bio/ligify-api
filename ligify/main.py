@@ -31,14 +31,13 @@ class InputSchema(Schema):
     filters = fields.Nested(FilterSchema) 
 
 def lambda_handler(event, context):
-    print(numpy.__file__)
-
-    # def create_plasmid(regulators, chemical):
-    #     for regulator in regulators:
-    #         result = create_genbank(regulator['refseq'], chemical, regulator['protein']['context']['promoter']['regulated_seq'], regulator['reg_protein_seq'])
-    #         regulator['plasmid_sequence'] = str(result)
+    def create_plasmid(regulators, chemical):
+        for regulator in regulators:
+            result = create_genbank(regulator['refseq'], chemical, regulator['protein']['context']['promoter']['regulated_seq'], regulator['reg_protein_seq'])
+            regulator['plasmid_sequence'] = str(result)
         
-    #     return regulators
+        return regulators
+
 
     load_dotenv()
 
@@ -61,13 +60,11 @@ def lambda_handler(event, context):
         chemical = {"name": chemical_name, "smiles": body['smiles'], "InChiKey": InChiKey}
 
         regulators, metrics = fetch_data(chemical['InChiKey'], body['filters'])
-        # regulators = create_plasmid(regulators, chemical_name)
-        # with open('data.json', 'w', encoding='utf-8') as f:
-        #     json.dump(regulators, f, ensure_ascii=False, indent=4)
+        regulators = create_plasmid(regulators, chemical_name)
         return {
             "statusCode": 200,
             "body": json.dumps({
-                # 'metrics': metrics,
+                'metrics': metrics,
                 'regulators': regulators
             })
         }

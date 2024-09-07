@@ -1,12 +1,10 @@
-# from dnachisel import DnaOptimizationProblem, AvoidPattern, EnforceGCContent, EnforceTranslation, CodonOptimize
-from dnachisel import AvoidPattern
+from dnachisel import *
 
 def codon_opt(protein_seq:str):
 
     # Create a random DNA seq given the protein seq. Append a stop codon.
     try: 
-        # protein_dna_seq = reverse_translate(protein_seq+"*")
-        protein_dna_seq = {}
+        protein_dna_seq = reverse_translate(protein_seq+"*")
     except Exception as e:
         print('reverse_translate exception')
         print(e)

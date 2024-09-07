@@ -1,9 +1,7 @@
 requests
 xmltodict
-rdkit
-libChEBIpy
 biopython
 dnachisel
 python-dotenv
 marshmallow
-numpy==1.26.0
+numpy

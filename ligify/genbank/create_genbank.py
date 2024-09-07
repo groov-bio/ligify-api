@@ -3,13 +3,12 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from genbank.annotations import get_annotations, get_plasmid_components
-# from genbank.codon_optimize import codon_opt
+from genbank.codon_optimize import codon_opt
 
 def create_genbank(regulator_name, ligand_name, promoter_seq, regulator_protein_seq):
     
     # Codon optimize the natural sequence
-    # opt_regulator_seq = codon_opt(regulator_protein_seq)
-    opt_regulator_seq = {}
+    opt_regulator_seq = codon_opt(regulator_protein_seq)
 
     # Create the plasmid sequence record
     plasmid_components = get_plasmid_components()
