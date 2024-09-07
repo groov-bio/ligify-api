@@ -28,6 +28,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
 
+    - name: Sam Build
+      run: sam build --use-container --container-env-var NcbiApiKey="${{ secrets.ncbiapikey }}"
+
     - name: Deploy SAM application
       run: |
-        sam deploy --template-file template.yaml --stack-name ligify --parameter-overrides NcbiApiKey="${{ secrets.ncbiapikey }}" --no-confirm-changeset --no-fail-on-empty-changeset
+        sam deploy --stack-name ligify --no-confirm-changeset --no-fail-on-empty-changeset
