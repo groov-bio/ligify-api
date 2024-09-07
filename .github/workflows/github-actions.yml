@@ -30,4 +30,4 @@ jobs:
 
     - name: Deploy SAM application
       run: |
-        sam deploy --template-file template.yaml --stack-name ligify --parameter-overrides NCBI_API_KEY="${{ secrets[format('{0}_NCBI_API_KI', env.env)]}}" --no-confirm-changeset --no-fail-on-empty-changeset
+        sam deploy --template-file template.yaml --stack-name ligify --parameter-overrides NCBI_API_KEY="${{ secrets[format('{0}_NCBI_API_KEY', env.env)]}}" --no-confirm-changeset --no-fail-on-empty-changeset
