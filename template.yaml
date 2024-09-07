@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   ligify-api
 Parameters:
-  NCBI_API_KEY:
+  NcbiApiKey:
     Type: String
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
@@ -24,7 +24,7 @@ Resources:
       Runtime: python3.11
       Environment:
         Variables:
-          NCBI_API_KEY: !Ref NCBI_API_KEY
+          NcbiApiKey: !Ref NcbiApiKey
       Architectures:
         - arm64
       Events:

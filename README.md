@@ -20,7 +20,7 @@ In the root of the project, create a `env.local.json` file with the following st
 ```
 {
     "Parameters": {
-        "NCBI_API_KEY": "XXXXXXXXXXXXXXX"
+        "NcbiApiKey": "XXXXXXXXXXXXXXX"
     }
 }
 ```
