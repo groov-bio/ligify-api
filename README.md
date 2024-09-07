@@ -41,6 +41,20 @@ In order to run Ligify locally, you have two options:
 
 Refer to issue [#921](https://github.com/aws/aws-sam-cli/issues/921) for more information
 
+# Venv
+
+It's recommended to install the packages in `/ligify` locally using a virtual environment. Depending on your system, installing can be different but the [venv](https://docs.python.org/3/library/venv.html) docs generally cover most systems. The directory `ligify-venv` is already part of `.gitignore` so it's suggested to use that naming convention.
+
+# Contributing
+
+We welcome any pull requests to help make the ligify-api better. Review the below code formatting guidelines and be sure to fill in the PR template appropriately.
+
+# Code formatting and quality
+
+We use [ruff](https://github.com/astral-sh/ruff) for python code formatting and quality which is installed independently of the bundled dependencies. Please review their documentation in order to properly format your codebase. 
+
+You can run `ruff check` for quality and `ruff format` for formatting
+
 # Compromises
 
 During development, the team came to realize that numpy did not behave properly in AWS SAM when using just `local start-api`. See [#7429](https://github.com/aws/aws-sam-cli/issues/7429) and [#27338](https://github.com/numpy/numpy/issues/27338) for more information. To get around this, the `--use-container` flag was introduced which creates an isolated environment locally and resolves dependency issues.

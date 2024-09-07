@@ -5,3 +5,4 @@ dnachisel
 python-dotenv
 marshmallow
 numpy
+ruff

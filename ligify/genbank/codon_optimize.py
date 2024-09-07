@@ -1,12 +1,19 @@
-from dnachisel import *
+from dnachisel import (
+    CodonOptimize,
+    reverse_translate,
+    DnaOptimizationProblem,
+    AvoidPattern,
+    EnforceGCContent,
+    EnforceTranslation,
+)
 
-def codon_opt(protein_seq:str):
 
+def codon_opt(protein_seq: str):
     # Create a random DNA seq given the protein seq. Append a stop codon.
-    try: 
-        protein_dna_seq = reverse_translate(protein_seq+"*")
+    try:
+        protein_dna_seq = reverse_translate(protein_seq + "*")
     except Exception as e:
-        print('reverse_translate exception')
+        print("reverse_translate exception")
         print(e)
 
     # DEFINE THE OPTIMIZATION PROBLEM
@@ -16,12 +23,14 @@ def codon_opt(protein_seq:str):
             constraints=[
                 AvoidPattern("BsaI_site"),
                 EnforceGCContent(mini=0.35, maxi=0.65, window=50),
-                EnforceTranslation(location=(0, len(protein_dna_seq)))
+                EnforceTranslation(location=(0, len(protein_dna_seq))),
             ],
-            objectives=[CodonOptimize(species='e_coli', location=(0, len(protein_dna_seq)))]
+            objectives=[
+                CodonOptimize(species="e_coli", location=(0, len(protein_dna_seq)))
+            ],
         )
     except Exception as e:
-        print('DnaOptimizationProblem exception')
+        print("DnaOptimizationProblem exception")
         print(e)
 
     # SOLVE THE CONSTRAINTS, OPTIMIZE WITH RESPECT TO THE OBJECTIVE
@@ -29,12 +38,12 @@ def codon_opt(protein_seq:str):
     try:
         problem.resolve_constraints()
     except Exception as e:
-        print('resolve_constraints exception')
+        print("resolve_constraints exception")
         print(e)
     try:
         problem.optimize()
     except Exception as e:
-        print('optimize exception')
+        print("optimize exception")
         print(e)
 
     # GET THE FINAL SEQUENCE (AS STRING OR ANNOTATED BIOPYTHON RECORDS)
@@ -44,5 +53,6 @@ def codon_opt(protein_seq:str):
 
 
 if __name__ == "__main__":
-    codon_opt("MTTIRWRRMSIHSERITLADSPLHWAHTLNGSMRTHFEVQRLERGRGAYLARSRFGAGELYSAIAPSQVLRHFNDQRNANEAEHSYLIQIRSGALGVASGGRKVILANGDCSIVDSRQDFTLSSNSSTQGVVIRFPVSWLGAWVSNPEDLIARRVDAEIGWGRALSASVSNLDPLRIDDLGSNVNSIAEHVAMLISLASSAVSSEDGGVALRKMREVKRVLEQSFADANLEPESVSSQLGISKRYLHYVFAACGTTFGRELLEIRLGKAYRMLCATSGSGAVLKVAMSSGFSDSSHFSKKFKERYGVSPVSLVRQA")
-
+    codon_opt(
+        "MTTIRWRRMSIHSERITLADSPLHWAHTLNGSMRTHFEVQRLERGRGAYLARSRFGAGELYSAIAPSQVLRHFNDQRNANEAEHSYLIQIRSGALGVASGGRKVILANGDCSIVDSRQDFTLSSNSSTQGVVIRFPVSWLGAWVSNPEDLIARRVDAEIGWGRALSASVSNLDPLRIDDLGSNVNSIAEHVAMLISLASSAVSSEDGGVALRKMREVKRVLEQSFADANLEPESVSSQLGISKRYLHYVFAACGTTFGRELLEIRLGKAYRMLCATSGSGAVLKVAMSSGFSDSSHFSKKFKERYGVSPVSLVRQA"
+    )

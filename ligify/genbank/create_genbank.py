@@ -1,28 +1,34 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.SeqFeature import SeqFeature, FeatureLocation
 
-from genbank.annotations import get_annotations, get_plasmid_components
+from genbank.annotations import get_plasmid_components
 from genbank.codon_optimize import codon_opt
 
+
 def create_genbank(regulator_name, ligand_name, promoter_seq, regulator_protein_seq):
-    
     # Codon optimize the natural sequence
     opt_regulator_seq = codon_opt(regulator_protein_seq)
 
     # Create the plasmid sequence record
     plasmid_components = get_plasmid_components()
-    seq = plasmid_components["before_promoter"] + \
-            promoter_seq + \
-            plasmid_components["before_regulator"] + \
-            opt_regulator_seq + \
-            plasmid_components["after_regulator"]
+    seq = (
+        plasmid_components["before_promoter"]
+        + promoter_seq
+        + plasmid_components["before_regulator"]
+        + opt_regulator_seq
+        + plasmid_components["after_regulator"]
+    )
     plasmid_sequence = Seq(seq)
-    record = SeqRecord(plasmid_sequence,
-                    id=str(regulator_name),
-                    name="pLigify_"+regulator_name,
-                    description='This is a genetic circuit designed by Ligify to express GFP in response to the ligand '+ligand_name+' using the regulator '+regulator_name,
-                    annotations={"molecule_type": "DNA"})
+    record = SeqRecord(
+        plasmid_sequence,
+        id=str(regulator_name),
+        name="pLigify_" + regulator_name,
+        description="This is a genetic circuit designed by Ligify to express GFP in response to the ligand "
+        + ligand_name
+        + " using the regulator "
+        + regulator_name,
+        annotations={"molecule_type": "DNA"},
+    )
 
     # Set topology as circular
     record.annotations["topology"] = "circular"
@@ -52,7 +58,6 @@ def create_genbank(regulator_name, ligand_name, promoter_seq, regulator_protein_
     #                     "ApEinfo_fwdcolor":[annotation["color"]],\
     #                     "label": annotation["label"]}))
 
-
     # # Converts gbk into straight text
     # def get_gbk(record):
     #     outfileloc=NamedTemporaryFile()
@@ -65,11 +70,11 @@ def create_genbank(regulator_name, ligand_name, promoter_seq, regulator_protein_
     #     return record
 
     # # record = get_gbk(record)
-    
+
     return record.seq
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     reg = "VprR"
     lig = "4-ethylphenol"
     prom = "GTCAATTCCTCCAAACTGATTTGTTATCTAATGAGCATTTGACGGCTAAATTCACCATTACTATAATGAAGTAACCGCTATCACACCCTCATCATAACGGGGGTATGGTGGTTAGCAAACAGACAATTTGGTTCGGCAGGCGAATCAATCGTGCGGATGGAGTTGAAAAA"
