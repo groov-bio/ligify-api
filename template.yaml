@@ -6,30 +6,87 @@ Parameters:
   NcbiApiKey:
     Type: String
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 300
+    # Cloudfront has a hard limit of 178 seconds
+    # Trying to return from
+    Timeout: 178
     MemorySize: 1024
-
-    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
+
 Resources:
   LigifyFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ligify/
-      Handler: main.lambda_handler
-      Runtime: python3.11
+      PackageType: Image
+      CodeUri: ./ligify/
+      ImageConfig:
+        Command: ["main.lambda_handler"]
       Environment:
         Variables:
           NcbiApiKey: !Ref NcbiApiKey
       Architectures:
-        - arm64
-      Events:
-        Ligify:
-          Type: Api
-          Properties:
-            Path: /ligify
-            Method: post
+        # x86_64 is required for github actions
+        - x86_64
+        # Use below for macos local dev
+        # - arm64
+      FunctionUrlConfig:
+        AuthType: NONE
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: v1
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+          - Id: LambdaFunctionOrigin
+            DomainName: !Select
+              - 2
+              - !Split
+                - '/'
+                - !GetAtt LigifyFunctionUrl.FunctionUrl
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+        DefaultRootObject: ''
+        DefaultCacheBehavior:
+          TargetOriginId: LambdaFunctionOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - POST
+            - PATCH
+            - DELETE
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # AWS-managed policy: CachingDisabled
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # AWS-managed policy: AllViewerExceptHostHeader
+        CacheBehaviors:
+          - PathPattern: /ligify
+            TargetOriginId: LambdaFunctionOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # AWS-managed policy: CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # AWS-managed policy: AllViewerExceptHostHeader
