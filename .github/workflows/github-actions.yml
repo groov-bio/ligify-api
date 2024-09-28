@@ -35,4 +35,4 @@ jobs:
 
     - name: Deploy SAM application
       run: |
-        sam deploy --stack-name ligify-api --resolve-s3 --capabilities CAPABILITY_IAM --resolve-image-repos --no-confirm-changeset --no-fail-on-empty-changeset
+        sam deploy --stack-name ligify-api --resolve-s3 --capabilities CAPABILITY_IAM --resolve-image-repos --parameter-overrides NcbiApiKey="${{ secrets.ncbiapikey }}" --no-confirm-changeset --no-fail-on-empty-changeset
