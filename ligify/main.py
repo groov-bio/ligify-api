@@ -63,6 +63,13 @@ class InputSchema(Schema):
 
 
 def lambda_handler(event, context):
+    path = event['rawPath']
+    if path != '/ligify':
+        return {
+            'statusCode': 403,
+            'body': 'Forbidden'
+        }
+    
     def create_plasmid(regulators, chemical):
         for regulator in regulators:
             result = create_genbank(

@@ -44,6 +44,12 @@ Refer to issue [#921](https://github.com/aws/aws-sam-cli/issues/921) for more in
 
 You'll know it's ready to use locally when the output contains `Running on http://127.0.0.1:3000`
 
+# Deployment
+
+The following command can be used to deploy your own cloudformation stack:
+
+`sam deploy --stack-name ligify-api --resolve-s3 --capabilities CAPABILITY_IAM --resolve-image-repos --guided --debug`
+
 # Venv
 
 It's recommended to install the packages in `/ligify` locally using a virtual environment. Depending on your system, installing can be different but the [venv](https://docs.python.org/3/library/venv.html) docs generally cover most systems. The directory `ligify-venv` is already part of `.gitignore` so it's suggested to use that naming convention.
@@ -62,4 +68,8 @@ You can run `ruff check` for quality and `ruff format` for formatting
 
 During development, the team came to realize that numpy did not behave properly in AWS SAM when using just `local start-api`. See [#7429](https://github.com/aws/aws-sam-cli/issues/7429) and [#27338](https://github.com/numpy/numpy/issues/27338) for more information. To get around this, the `--use-container` flag was introduced which creates an isolated environment locally and resolves dependency issues.
 
-Occasionally, the rdkit wheel fails to build. When this happens, simply run the your appropriate build command again (mostly seems to happen with concurrently)
+Occasionally, the rdkit wheel fails to build. When this happens, simply run the your appropriate build command again (mostly seems to happen with concurrently).
+
+Cloudfront has a hard limit of 180 seconds which you need to request a quota increase for. In the event of a 504 timeout, you should default the request back to the function URL directly.
+
+In order to add a WebACL, you need to deploy your stack into us-east-1. 
