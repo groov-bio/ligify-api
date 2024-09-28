@@ -31,8 +31,8 @@ jobs:
           aws-region: us-east-2
 
     - name: Sam Build
-      run: sam build --use-container --container-env-var NcbiApiKey="${{ secrets.ncbiapikey }}" --debug
+      run: sam build --use-container --container-env-var NcbiApiKey="${{ secrets.ncbiapikey }}"
 
     - name: Deploy SAM application
       run: |
-        sam deploy --stack-name ligify --no-confirm-changeset --no-fail-on-empty-changeset
+        sam deploy --stack-name ligify-api --resolve-s3 --capabilities CAPABILITY_IAM --resolve-image-repos --no-confirm-changeset --no-fail-on-empty-changeset
