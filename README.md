@@ -33,12 +33,12 @@ In order to run Ligify locally, you have two options:
 
 1. Open two terminals side by side and run the following commands:
 
-- `sam build --use-container` <- terminal 1
+- `sam build -t local.template.yaml` <- terminal 1
 - `sam local start-api --env-vars env.local.json` <- terminal 2 after step #1 completes
 
 2. Add [nodemon](https://www.npmjs.com/package/nodemon) globally, [concurrently](https://www.npmjs.com/package/concurrently) globally and python3.11 then run the following command:
 
-- `sam build && concurrently "nodemon --on-change-only --ext py --exec sam build" "sam local start-api --env-vars env.local.json"`
+- `sam build -t local.template.yaml && concurrently "nodemon --on-change-only --ext py --exec sam build -t local.template.yaml" "sam local start-api --env-vars env.local.json"`
 
 Refer to issue [#921](https://github.com/aws/aws-sam-cli/issues/921) for more information
 
