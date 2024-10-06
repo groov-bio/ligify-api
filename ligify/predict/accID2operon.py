@@ -1,3 +1,4 @@
+import json
 import os
 import requests
 import re
@@ -426,46 +427,71 @@ def predict_promoter(operon, regIndex, genome_id):
 
 
 def acc2MetaDataList(access_ids):
-    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NcbiApiKey')}"
-    for id in access_ids.keys():
+    base_url = (
+        f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NcbiApiKey')}"
+    )
+    id_list = list(access_ids.keys())
+    for id in id_list:
+        access_ids[id] = None  # Initialize to None
         base_url += f"&id={id}"
 
     result = requests.get(base_url)
     if result.status_code != 200:
         print("non-200 HTTP response. eFetch failed")
+        return access_ids  # Return early if the request fails
 
     parsed = xmltodict.parse(result.text)
 
     if "IPGReport" in parsed["IPGReportSet"].keys():
-        for entry in parsed["IPGReportSet"]["IPGReport"]:
+        # Ensure IPGReport is a list
+        ipg_reports = parsed["IPGReportSet"]["IPGReport"]
+        if not isinstance(ipg_reports, list):
+            ipg_reports = [ipg_reports]
+
+        ids_set_to_none = set()
+
+        for entry in ipg_reports:
+            input_acc = entry.get("@product_acc")
+            if not input_acc:
+                # Cannot tie back to access_ids
+                print("No '@product_acc' in entry, cannot tie back to access_ids")
+                continue
+
+            id = input_acc
+
             if "ProteinList" in entry:
                 protein = entry["ProteinList"]["Protein"]
+                if isinstance(protein, list):
+                    protein = protein[0]
+
+                if "CDSList" not in protein:
+                    access_ids[id] = None  # Explicitly set to None
+                    ids_set_to_none.add(id)
+                    continue
+
+                CDS = protein["CDSList"]["CDS"]
+                if isinstance(CDS, list):
+                    CDS = CDS[0]
+
+                proteinDict = {
+                    "accver": CDS["@accver"],
+                    "start": CDS["@start"],
+                    "stop": CDS["@stop"],
+                    "strand": CDS["@strand"],
+                }
+                access_ids[id] = proteinDict
             else:
-                access_ids[entry["@product_acc"]] = None
-
-            if isinstance(protein, list):
-                protein = protein[0]
-
-            if "CDSList" not in protein.keys():
-                access_ids[entry["@product_acc"]] = None
-
-            CDS = protein["CDSList"]["CDS"]
-
-            # CDS is a list if there is more than 1 CDS returned, otherwise it's a dictionary
-            if isinstance(CDS, list):
-                CDS = CDS[0]
-
-            proteinDict = {
-                "accver": CDS["@accver"],
-                "start": CDS["@start"],
-                "stop": CDS["@stop"],
-                "strand": CDS["@strand"],
-            }
-
-            access_ids[entry["@product_acc"]] = proteinDict
+                access_ids[id] = None  # Explicitly set to None
+                ids_set_to_none.add(id)
     else:
-        # TODO - handle error
-        raise Exception("No IPGReport")
+        # Handle error if IPGReport is missing
+        raise Exception("No IPGReport in response")
+
+    # Fallback for IDs not explicitly set to None
+    for id in access_ids:
+        if access_ids[id] is None and id not in ids_set_to_none:
+            # Use the fallback function
+            access_ids[id] = acc2MetaData(id)
 
     return access_ids
 
@@ -476,6 +502,7 @@ def acc2MetaData(access_id: str):
     )
     if result.status_code != 200:
         print("non-200 HTTP response. eFetch failed")
+        return None  # Return None on failure
 
     parsed = xmltodict.parse(result.text)
 
@@ -486,8 +513,8 @@ def acc2MetaData(access_id: str):
             if isinstance(protein, list):
                 protein = protein[0]
 
-            if "CDSList" not in protein.keys():
-                return "EMPTY"
+            if "CDSList" not in protein:
+                return None  # Return None if no CDSList
 
             CDS = protein["CDSList"]["CDS"]
 
@@ -504,9 +531,10 @@ def acc2MetaData(access_id: str):
 
             return proteinDict
         else:
-            return "EMPTY"
+            return None
     else:
-        return "EMPTY"
+        return None
+
 
 
 def acc2OperonList(operon_list_entries):
@@ -595,7 +623,9 @@ if __name__ == "__main__":
     #     print(genes)
     #     print(index)
 
-    print(acc2MetaDataList(["WP_011046214.1"]))
+    # print(acc2MetaData('NP_414848.1'))
+
+    print(acc2MetaDataList({'NP_414848.1': None, 'NP_390983.2': None, 'WP_011369019.1': None, 'WP_013240889.1': None, 'WP_041640381.1': None}))
 
     # print(acc2operon('WP_011046214.1'))
     # acc2operonList(['WP_011046214.1', 'ADT64689.1', 'WP_011336734.1','WP_069687654.1'])

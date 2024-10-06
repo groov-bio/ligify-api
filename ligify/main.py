@@ -63,7 +63,14 @@ class InputSchema(Schema):
 
 
 def lambda_handler(event, context):
-    path = event['rawPath']
+    path = event.get('rawPath')
+    if not path:
+        path = event.get('path')
+    if not path:
+        return {
+            'statusCode': 403,
+            'body': 'Forbidden'
+        }
     if path != '/ligify':
         return {
             'statusCode': 403,
