@@ -1,5 +1,5 @@
 # Ligify
-This repo focuses on predicting protein-ligand interactions.
+This repo focuses on predicting protein-ligand interactions and providing a publically available service to work with this prediction algorithm.
 
 # Purpose
 
@@ -31,12 +31,16 @@ And NCBI API Key can be obtained by registering for an [NCBI Account](https://su
 
 In order to run Ligify locally, you have two options:
 
-1. Open two terminals side by side and run the following commands:
+### Option A
 
-- `sam build -t local.template.yaml` <- terminal 1
-- `sam local start-api --env-vars env.local.json` <- terminal 2 after step #1 completes
+Open two terminals side by side and run the following commands:
 
-2. Add [nodemon](https://www.npmjs.com/package/nodemon) globally, [concurrently](https://www.npmjs.com/package/concurrently) globally and python3.11 then run the following command:
+- `sam build -t local.template.yaml` <- `terminal #1`
+- `sam local start-api --env-vars env.local.json` <- `terminal #2 after step #1 completes`
+
+### Option B
+
+Add [nodemon](https://www.npmjs.com/package/nodemon) globally, [concurrently](https://www.npmjs.com/package/concurrently) globally and python3.11 then run the following command:
 
 - `sam build -t local.template.yaml && concurrently "nodemon --on-change-only --ext py --exec sam build -t local.template.yaml" "sam local start-api --env-vars env.local.json"`
 
@@ -66,10 +70,10 @@ You can run `ruff check` for quality and `ruff format` for formatting
 
 # Compromises
 
-During development, the team came to realize that numpy did not behave properly in AWS SAM when using just `local start-api`. See [#7429](https://github.com/aws/aws-sam-cli/issues/7429) and [#27338](https://github.com/numpy/numpy/issues/27338) for more information. To get around this, the `--use-container` flag was introduced which creates an isolated environment locally and resolves dependency issues.
+1. During development, the team came to realize that numpy did not behave properly in AWS SAM when using just `local start-api`. See [#7429](https://github.com/aws/aws-sam-cli/issues/7429) and [#27338](https://github.com/numpy/numpy/issues/27338) for more information. To get around this, the `--use-container` flag was introduced which creates an isolated environment locally and resolves dependency issues.
 
-Occasionally, the rdkit wheel fails to build. When this happens, simply run the your appropriate build command again (mostly seems to happen with concurrently).
+2. Occasionally, the rdkit wheel fails to build. When this happens, simply run the your appropriate build command again (mostly seems to happen with concurrently).
 
-Cloudfront has a hard limit of 180 seconds which you need to request a quota increase for. In the event of a 504 timeout, you should default the request back to the function URL directly.
+3. Cloudfront has a hard limit of 180 seconds which you need to request a quota increase for. In the event of a 504 timeout, you should default the request back to the function URL directly.
 
-In order to add a WebACL, you need to deploy your stack into us-east-1. 
+4. In order to add a WebACL, you need to deploy your stack into us-east-1. 
