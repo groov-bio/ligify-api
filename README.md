@@ -48,6 +48,25 @@ Refer to issue [#921](https://github.com/aws/aws-sam-cli/issues/921) for more in
 
 You'll know it's ready to use locally when the output contains `Running on http://127.0.0.1:3000`
 
+# Example request
+
+```
+curl --request POST \
+  --url http://127.0.0.1:3000/ligify \
+  --header 'content-type: application/json' \
+  --data '{
+  "smiles": "C=CC(=O)[O-]",
+  "filters": {
+    "max_reactions": 20,
+    "proteins_per_reaction": 20,
+    "reviewed": true,
+    "lineage": "Family",
+    "max_operons": 20,
+    "max_alt_chems": 10
+  }
+}'
+```
+
 # Deployment
 
 The following command can be used to deploy your own cloudformation stack:
