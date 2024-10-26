@@ -7,6 +7,22 @@ from predict.rank import calculate_rank
 def fetch_data(InChiKey, filters):
     metrics = {}
 
+
+
+    # TFBMiner gets reactions from KEGG via the REST API:
+        # https://rest.kegg.jp/get/cpd:C00511
+            # need to input KEGG compound ID, so we'd need to convert smiles into that
+            # this will return EC numbers: 1.3.1.125       2.8.3.12        3.5.1.4         3.5.5.7  
+            # from there you can use those EC numbers in new queries to get genes:
+        # https://rest.kegg.jp/get/2.8.3.12
+            # This will return the KEGG IDs of associated genes, if any:
+            # EH206_20600, EH206_20605, Sant_2230, Sant_2231, ...
+            # from here you can use each gene in a new query to get the ncbi ID:
+        # https://rest.kegg.jp/get/xct:J151_00486
+            # this returns a bunch of info, including the ncbi ID: AJD66958
+            # at this point, the workflow merges with the parallel RHEA workflow
+
+
     # FETCH REACTIONS
     reactions = fetch_reactions(
         InChiKey=InChiKey, max_reactions=filters["max_reactions"]

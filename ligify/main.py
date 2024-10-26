@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import json
 
 from fetch_data import fetch_data
-from genbank.create_genbank import create_genbank
+from genbank.create_genbank import create_plasmid
 from predict.pubchem import get_inchikey, get_name
 
 from marshmallow import Schema, fields, ValidationError, validate
@@ -77,17 +77,6 @@ def lambda_handler(event, context):
             'body': 'Forbidden'
         }
     
-    def create_plasmid(regulators, chemical):
-        for regulator in regulators:
-            result = create_genbank(
-                regulator["refseq"],
-                chemical,
-                regulator["protein"]["context"]["promoter"]["regulated_seq"],
-                regulator["reg_protein_seq"],
-            )
-            regulator["plasmid_sequence"] = str(result)
-
-        return regulators
 
     load_dotenv()
 
