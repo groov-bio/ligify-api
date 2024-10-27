@@ -64,6 +64,9 @@ class InputSchema(Schema):
 
 def lambda_handler(event, context):
     path = event.get('rawPath')
+        # Extract HTTP method and headers
+    method = event.get('httpMethod', '')
+
     if not path:
         path = event.get('path')
     if not path:
@@ -75,6 +78,19 @@ def lambda_handler(event, context):
         return {
             'statusCode': 403,
             'body': 'Forbidden'
+        }
+    
+    if method == 'OPTIONS':
+            # Build the response
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': "http://localhost:3000",
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                'Access-Control-Max-Age': 86400
+            },
+            'body': ''  # No body needed for OPTIONS response
         }
     
     def create_plasmid(regulators, chemical):
@@ -114,6 +130,11 @@ def lambda_handler(event, context):
         regulators = create_plasmid(regulators, chemical_name)
         return {
             "statusCode": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "http://localhost:3000",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization"
+            },
             "body": json.dumps({"metrics": metrics, "regulators": regulators}),
         }
     except Exception as e:
