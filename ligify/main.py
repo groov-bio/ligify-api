@@ -32,13 +32,13 @@ class FilterSchema(Schema):
         required=True,
         validate=validate.OneOf(
             ["Phylum", "Class", "Order", "Family", "Genus", "None"],
-            error="lineage should be one of Domain, Phylum, Class, Order, Family, Genus, None",
+            error="lineage should be one of Phylum, Class, Order, Family, Genus, None",
         ),
     )
     max_operons = fields.Integer(
         required=True,
         validate=validate.Range(
-            min=1, error="max_operions must be a positive integer."
+            min=1, error="max_operons must be a positive integer."
         ),
     )
     max_alt_chems = fields.Integer(
@@ -63,84 +63,104 @@ class InputSchema(Schema):
 
 
 def lambda_handler(event, context):
-    path = event.get('rawPath')
-        # Extract HTTP method and headers
-    method = event.get('httpMethod', '')
+    print("Received event:", json.dumps(event))
 
-    if not path:
-        path = event.get('path')
-    if not path:
-        return {
-            'statusCode': 403,
-            'body': 'Forbidden'
-        }
-    if path != '/ligify':
-        return {
-            'statusCode': 403,
-            'body': 'Forbidden'
-        }
-    
+    # Extract path and method from the event
+    path = event.get('rawPath') or event.get('path')
+    method = event.get('httpMethod', '').upper()
+    print(f"Method: {method}, Path: {path}")  # Log the method and path
+
+    # Adjust path validation
+    if not path or '/ligify' not in path:
+        return generate_response(403, "Forbidden")
+
+    # Handle CORS preflight request
     if method == 'OPTIONS':
-            # Build the response
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': "http://localhost:3000",
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-                'Access-Control-Max-Age': 86400
-            },
-            'body': ''  # No body needed for OPTIONS response
-        }
-    
-    def create_plasmid(regulators, chemical):
-        for regulator in regulators:
-            result = create_genbank(
-                regulator["refseq"],
-                chemical,
-                regulator["protein"]["context"]["promoter"]["regulated_seq"],
-                regulator["reg_protein_seq"],
-            )
-            regulator["plasmid_sequence"] = str(result)
+        return generate_response(200, "", is_options=True)
 
-        return regulators
-
+    # Load environment variables
     load_dotenv()
 
-    body = json.loads(event["body"])
+    # Parse and validate the request body
+    try:
+        body = json.loads(event.get("body", "{}"))
+    except json.JSONDecodeError:
+        return generate_response(
+            400,
+            {"message": "Invalid JSON in request body."}
+        )
 
     input_schema = InputSchema()
 
     try:
-        input_schema.load(body)
+        validated_input = input_schema.load(body)
     except ValidationError as e:
-        print(e)
-        return {"status_code": 400, "message": json.dumps(e.messages_dict)}
+        print("Validation error:", e)
+        return generate_response(
+            400,
+            {"message": e.messages}
+        )
 
+    # Process the request
     try:
-        chemical_name = get_name(body["smiles"], "smiles")
-        InChiKey = get_inchikey(body["smiles"], "smiles")
+        chemical_name = get_name(validated_input["smiles"], "smiles")
+        InChiKey = get_inchikey(validated_input["smiles"], "smiles")
         chemical = {
             "name": chemical_name,
-            "smiles": body["smiles"],
+            "smiles": validated_input["smiles"],
             "InChiKey": InChiKey,
         }
 
-        regulators, metrics = fetch_data(chemical["InChiKey"], body["filters"])
+        regulators, metrics = fetch_data(chemical["InChiKey"], validated_input["filters"])
         regulators = create_plasmid(regulators, chemical_name)
-        return {
-            "statusCode": 200,
-              "headers": {
-                "Access-Control-Allow-Origin": "http://localhost:3000",
-                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization"
-            },
-            "body": json.dumps({"metrics": metrics, "regulators": regulators}),
+
+        response_body = {
+            "metrics": metrics,
+            "regulators": regulators
         }
+
+        return generate_response(200, response_body)
     except Exception as e:
-        print(e)
-        # TODO - improve error responses per diagram
+        print("Internal server error:", e)
+        return generate_response(
+            500,
+            {"message": "Internal Server Error"}
+        )
+
+
+def create_plasmid(regulators, chemical):
+    for regulator in regulators:
+        result = create_genbank(
+            regulator["refseq"],
+            chemical,
+            regulator["protein"]["context"]["promoter"]["regulated_seq"],
+            regulator["reg_protein_seq"],
+        )
+        regulator["plasmid_sequence"] = str(result)
+    return regulators
+
+
+def generate_response(status_code, body, is_options=False):
+    headers = {
+        "Access-Control-Allow-Origin": "http://localhost:3001",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true"
+    }
+
+    if is_options:
+        # OPTIONS requests typically do not have a body
         return {
-            "statusCode": 500,
-            # "message": json.dumps()
+            'statusCode': status_code,
+            'headers': headers,
+            'body': ''
         }
+
+    # Ensure the body is a JSON string
+    body_str = json.dumps(body) if isinstance(body, (dict, list)) else str(body)
+
+    return {
+        'statusCode': status_code,
+        'headers': headers,
+        'body': body_str
+    }

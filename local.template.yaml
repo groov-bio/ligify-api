@@ -6,15 +6,13 @@ Parameters:
   NcbiApiKey:
     Type: String
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 300
     MemorySize: 1024
-
-    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
+
 Resources:
   LigifyFunction:
     Type: AWS::Serverless::Function
@@ -32,4 +30,14 @@ Resources:
           Type: Api
           Properties:
             Path: /ligify
-            Method: post
+            Method: ANY  # Change this to ANY
+            Cors:
+              AllowMethods:  # Use lists instead of strings
+                - GET
+                - POST
+                - OPTIONS
+              AllowHeaders:
+                - Content-Type
+                - Authorization
+              AllowOrigin: "http://localhost:3001"
+              AllowCredentials: true
