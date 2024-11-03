@@ -34,7 +34,6 @@ Resources:
           AllowMethods:
             - GET
             - POST
-            - OPTIONS
             - PUT
             - PATCH
             - DELETE
@@ -65,18 +64,21 @@ Resources:
         Name: 'CORSResponseHeadersPolicy'
         CorsConfig:
           AccessControlAllowOrigins:
-            - '*'
+            Items:
+              - '*'
           AccessControlAllowHeaders:
-            - '*'
+            Items:
+              - '*'
           AccessControlAllowMethods:
-            - GET
-            - POST
-            - OPTIONS
-            - PUT
-            - PATCH
-            - DELETE
-          OriginOverride: true
+            Items:
+              - GET
+              - POST
+              - OPTIONS
+              - PUT
+              - PATCH
+              - DELETE
           AccessControlAllowCredentials: true
+          OriginOverride: true
 
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -108,7 +110,7 @@ Resources:
             - GET
             - HEAD
           Compress: true
-          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
           OriginRequestPolicyId: !Ref OriginRequestPolicyAllHeaders
           ResponseHeadersPolicyId: !Ref ResponseHeadersPolicyCORS
         CacheBehaviors:
@@ -127,6 +129,6 @@ Resources:
               - GET
               - HEAD
             Compress: true
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
             OriginRequestPolicyId: !Ref OriginRequestPolicyAllHeaders
             ResponseHeadersPolicyId: !Ref ResponseHeadersPolicyCORS
