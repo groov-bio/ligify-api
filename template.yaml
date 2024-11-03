@@ -39,7 +39,6 @@ Resources:
             - DELETE
           AllowHeaders:
             - '*'
-          AllowCredentials: true
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: .
@@ -77,7 +76,6 @@ Resources:
               - PUT
               - PATCH
               - DELETE
-          AccessControlAllowCredentials: true
           OriginOverride: true
 
   CloudFrontDistribution:
