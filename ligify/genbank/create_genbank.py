@@ -1,7 +1,11 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO
+from Bio.SeqFeature import SeqFeature, FeatureLocation
 
-from genbank.annotations import get_plasmid_components
+from tempfile import NamedTemporaryFile
+
+from genbank.annotations import get_annotations, get_plasmid_components
 from genbank.codon_optimize import codon_opt
 
 
@@ -34,44 +38,44 @@ def create_genbank(regulator_name, ligand_name, promoter_seq, regulator_protein_
     record.annotations["topology"] = "circular"
 
     # Add annotations
-    # annotations = get_annotations(promoter_seq, opt_regulator_seq, regulator_name, regulator_protein_seq)
-    # for annotation in annotations:
-    #     if "translation" in annotation.keys():
-    #         record.features.append(\
-    #             SeqFeature(FeatureLocation(\
-    #                 start = annotation["start"], \
-    #                 end = annotation["end"], \
-    #                 strand = annotation["strand"]), \
-    #                 type = annotation["type"], \
-    #                 qualifiers={ \
-    #                     "ApEinfo_fwdcolor":[annotation["color"]],\
-    #                     "translation":[annotation["translation"]],\
-    #                     "label": annotation["label"]}))
-    #     else:
-    #         record.features.append(\
-    #             SeqFeature(FeatureLocation(\
-    #                 start = annotation["start"], \
-    #                 end = annotation["end"], \
-    #                 strand = annotation["strand"]), \
-    #                 type = annotation["type"], \
-    #                 qualifiers={ \
-    #                     "ApEinfo_fwdcolor":[annotation["color"]],\
-    #                     "label": annotation["label"]}))
+    annotations = get_annotations(promoter_seq, opt_regulator_seq, regulator_name, regulator_protein_seq)
+    for annotation in annotations:
+        if "translation" in annotation.keys():
+            record.features.append(\
+                SeqFeature(FeatureLocation(\
+                    start = annotation["start"], \
+                    end = annotation["end"], \
+                    strand = annotation["strand"]), \
+                    type = annotation["type"], \
+                    qualifiers={ \
+                        "ApEinfo_fwdcolor":[annotation["color"]],\
+                        "translation":[annotation["translation"]],\
+                        "label": annotation["label"]}))
+        else:
+            record.features.append(\
+                SeqFeature(FeatureLocation(\
+                    start = annotation["start"], \
+                    end = annotation["end"], \
+                    strand = annotation["strand"]), \
+                    type = annotation["type"], \
+                    qualifiers={ \
+                        "ApEinfo_fwdcolor":[annotation["color"]],\
+                        "label": annotation["label"]}))
 
     # # Converts gbk into straight text
-    # def get_gbk(record):
-    #     outfileloc=NamedTemporaryFile()
-    #     with open(outfileloc.name, "w") as handle:
-    #         SeqIO.write(record, handle, "genbank")
-    #     with open(outfileloc.name) as handle:
-    #         record=handle.read()
-    #     outfileloc.close()
+    def get_gbk(record):
+        outfileloc=NamedTemporaryFile()
+        with open(outfileloc.name, "w") as handle:
+            SeqIO.write(record, handle, "genbank")
+        with open(outfileloc.name) as handle:
+            record=handle.read()
+        outfileloc.close()
 
-    #     return record
+        return record
 
-    # # record = get_gbk(record)
+    record = get_gbk(record)
 
-    return record.seq
+    return record
 
 
 if __name__ == "__main__":
