@@ -22,7 +22,7 @@ import xmltodict
 
 
 def NC2genome(genome_id, operon):
-    base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore"
+    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&api_key={os.getenv('NcbiApiKey')}"
     startPos = operon[0]["start"]
     stopPos = operon[-1]["stop"]
     response = requests.get(
@@ -145,7 +145,7 @@ def NC2genome(genome_id, operon):
 
 def getGenes(genome_id, startPos, stopPos):
     # Fetch the genome fragment
-    base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore"
+    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&api_key={os.getenv('NcbiApiKey')}"
     try:
         response = requests.get(
             base_url
@@ -404,6 +404,7 @@ def predict_promoter(operon, regIndex, genome_id):
         + "&seq_stop="
         + str(stopPos)
         + "&strand=1&rettype=fasta"
+        + f"&api_key={os.getenv('NcbiApiKey')}"
     )
     response = requests.get(URL)
 
