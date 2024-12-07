@@ -419,6 +419,10 @@ def predict_promoter(operon, regIndex, genome_id):
             # print('WARNING: Intergenic region is over 800bp')
             return None
     else:
+        print(f"Status Code: {response.status_code}")
+        print(f"Reason: {response.reason}")
+        print(f"Response Text: {response.text}")
+        print(f"Response Headers: {response.headers}")
         print("FATAL: Bad eFetch request")
         return None
 
