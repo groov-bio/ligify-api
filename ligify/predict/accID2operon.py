@@ -419,6 +419,10 @@ def predict_promoter(operon, regIndex, genome_id):
             # print('WARNING: Intergenic region is over 800bp')
             return None
     else:
+        print(f"Status Code: {response.status_code}")
+        print(f"Reason: {response.reason}")
+        print(f"Response Text: {response.text}")
+        print(f"Response Headers: {response.headers}")
         print("FATAL: Bad eFetch request")
         return None
 
@@ -437,6 +441,11 @@ def acc2MetaDataList(access_ids):
 
     result = requests.get(base_url)
     if result.status_code != 200:
+        print("non-200 HTTP response. eFetch failed")
+        print(f"Status Code: {result.status_code}")
+        print(f"Reason: {result.reason}")
+        print(f"Response Text: {result.text}")
+        print(f"Response Headers: {result.headers}")
         print("non-200 HTTP response. eFetch failed")
         return access_ids  # Return early if the request fails
 
@@ -501,6 +510,10 @@ def acc2MetaData(access_id: str):
         f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NcbiApiKey')}"
     )
     if result.status_code != 200:
+        print(f"Status Code: {result.status_code}")
+        print(f"Reason: {result.reason}")
+        print(f"Response Text: {result.text}")
+        print(f"Response Headers: {result.headers}")
         print("non-200 HTTP response. eFetch failed")
         return None  # Return None on failure
 
