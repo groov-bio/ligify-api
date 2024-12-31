@@ -22,7 +22,7 @@ import xmltodict
 
 
 def NC2genome(genome_id, operon):
-    base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore"
+    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&api_key={os.getenv('NcbiApiKey')}"
     startPos = operon[0]["start"]
     stopPos = operon[-1]["stop"]
     response = requests.get(
@@ -145,7 +145,7 @@ def NC2genome(genome_id, operon):
 
 def getGenes(genome_id, startPos, stopPos):
     # Fetch the genome fragment
-    base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore"
+    base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&api_key={os.getenv('NcbiApiKey')}"
     try:
         response = requests.get(
             base_url
@@ -404,6 +404,7 @@ def predict_promoter(operon, regIndex, genome_id):
         + "&seq_stop="
         + str(stopPos)
         + "&strand=1&rettype=fasta"
+        + f"&api_key={os.getenv('NcbiApiKey')}"
     )
     response = requests.get(URL)
 
@@ -419,6 +420,10 @@ def predict_promoter(operon, regIndex, genome_id):
             # print('WARNING: Intergenic region is over 800bp')
             return None
     else:
+        print(f"Status Code: {response.status_code}")
+        print(f"Reason: {response.reason}")
+        print(f"Response Text: {response.text}")
+        print(f"Response Headers: {response.headers}")
         print("FATAL: Bad eFetch request")
         return None
 
@@ -437,6 +442,11 @@ def acc2MetaDataList(access_ids):
 
     result = requests.get(base_url)
     if result.status_code != 200:
+        print("non-200 HTTP response. eFetch failed")
+        print(f"Status Code: {result.status_code}")
+        print(f"Reason: {result.reason}")
+        print(f"Response Text: {result.text}")
+        print(f"Response Headers: {result.headers}")
         print("non-200 HTTP response. eFetch failed")
         return access_ids  # Return early if the request fails
 
@@ -501,6 +511,10 @@ def acc2MetaData(access_id: str):
         f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NcbiApiKey')}"
     )
     if result.status_code != 200:
+        print(f"Status Code: {result.status_code}")
+        print(f"Reason: {result.reason}")
+        print(f"Response Text: {result.text}")
+        print(f"Response Headers: {result.headers}")
         print("non-200 HTTP response. eFetch failed")
         return None  # Return None on failure
 

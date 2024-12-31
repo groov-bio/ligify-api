@@ -8,8 +8,6 @@ Parameters:
 
 Globals:
   Function:
-    # Cloudfront has a hard limit of 178 seconds
-    # Trying to return from
     Timeout: 178
     MemorySize: 1024
     LoggingConfig:
@@ -27,16 +25,59 @@ Resources:
         Variables:
           NcbiApiKey: !Ref NcbiApiKey
       Architectures:
-        # x86_64 is required for github actions
         - x86_64
-        # Use below for macos local dev
-        # - arm64
       FunctionUrlConfig:
         AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - '*'
+          AllowMethods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+          AllowHeaders:
+            - '*'
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: .
       DockerTag: v1
+
+  OriginRequestPolicyAllHeaders:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: 'ForwardAllHeadersPolicy'
+        CookiesConfig:
+          CookieBehavior: all
+        QueryStringsConfig:
+          QueryStringBehavior: all
+        HeadersConfig:
+          HeaderBehavior: allViewer
+
+  ResponseHeadersPolicyCORS:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: 'CORSResponseHeadersPolicy'
+        CorsConfig:
+          AccessControlAllowOrigins:
+            Items:
+              - '*'
+          AccessControlAllowHeaders:
+            Items:
+              - '*'
+          AccessControlAllowMethods:
+            Items:
+              - GET
+              - POST
+              - OPTIONS
+              - PUT
+              - PATCH
+              - DELETE
+          AccessControlAllowCredentials: false
+          OriginOverride: true
 
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -67,10 +108,10 @@ Resources:
           CachedMethods:
             - GET
             - HEAD
-            - OPTIONS
           Compress: true
-          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # AWS-managed policy: CachingDisabled
-          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # AWS-managed policy: AllViewerExceptHostHeader
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+          OriginRequestPolicyId: !Ref OriginRequestPolicyAllHeaders
+          ResponseHeadersPolicyId: !Ref ResponseHeadersPolicyCORS
         CacheBehaviors:
           - PathPattern: /ligify
             TargetOriginId: LambdaFunctionOrigin
@@ -86,7 +127,7 @@ Resources:
             CachedMethods:
               - GET
               - HEAD
-              - OPTIONS
             Compress: true
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # AWS-managed policy: CachingDisabled
-            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # AWS-managed policy: AllViewerExceptHostHeader
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+            OriginRequestPolicyId: !Ref OriginRequestPolicyAllHeaders
+            ResponseHeadersPolicyId: !Ref ResponseHeadersPolicyCORS

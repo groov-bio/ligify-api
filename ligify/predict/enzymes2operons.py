@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import requests
 
@@ -82,6 +83,7 @@ def fetch_reg_protein_seq(accession: str):
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi/?db=protein&id="
         + accession
         + "&rettype=fasta"
+        + f"&api_key={os.getenv('NcbiApiKey')}"
     )
     response = requests.get(URL)
     if response.ok:
