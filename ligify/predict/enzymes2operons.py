@@ -184,6 +184,8 @@ def pull_regulators(protein, rxn):
                             "CHEBI:57540",    # NAD(-1)
                             "CHEBI:18009",    # NADP(+)
                             "CHEBI:15846",    # NAD(+)
+                            "CHEBI:58349",    # NADP
+                            "CHEBI:57783"     # NADPH(-4)
                         ]
                         unique_ligand_ids = [
                             i for i in unique_ligand_ids if i not in not_ligand_ids
