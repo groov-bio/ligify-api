@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import json
 
 from fetch_data import fetch_data
-from genbank.create_genbank import create_genbank, create_plasmid
+from genbank.create_genbank import create_plasmid
 from predict.pubchem import get_inchikey, get_name
 
 from marshmallow import Schema, fields, ValidationError, validate
@@ -128,18 +128,6 @@ def lambda_handler(event, context):
             {"message": "Internal Server Error"},
             origin=origin
         )
-
-
-def create_plasmid(regulators, chemical):
-    for regulator in regulators:
-        result = create_genbank(
-            regulator["refseq"],
-            chemical,
-            regulator["protein"]["context"]["promoter"]["regulated_seq"],
-            regulator["reg_protein_seq"],
-        )
-        regulator["plasmid_sequence"] = str(result)
-    return regulators
 
 
 def generate_response(status_code, body, is_options=False, origin=None):
