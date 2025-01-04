@@ -13,6 +13,8 @@ def fetch_data(InChiKey, filters):
     )
     total_rxns = len(reactions["rxn_data"])
     metrics["RHEA Reactions"] = total_rxns
+    
+    print(len(reactions["rxn_data"]) == 0)
 
     if total_rxns > 0:
         # FETCH GENES
@@ -46,12 +48,14 @@ def fetch_data(InChiKey, filters):
                 if rxn["proteins"]:
                     for protein in rxn["proteins"]:
                         refseq_id = protein["enzyme"]["ncbi_id"]
-                        if (
-                            refseq_id is not None
-                            and len(operon_list_entries.keys())
-                            <= filters["max_operons"]
-                        ):
+                        if refseq_id is not None:
                             operon_list_entries[refseq_id] = None
+                        # if (
+                        #     refseq_id is not None
+                        #     # and len(operon_list_entries.keys()) > 0
+                        #     # <= filters["max_operons"]
+                        # ):
+                        #     operon_list_entries[refseq_id] = None
 
             acc2OperonListResult = acc2OperonList(operon_list_entries)
 

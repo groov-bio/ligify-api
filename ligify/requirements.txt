@@ -5,3 +5,5 @@ dnachisel
 python-dotenv
 marshmallow
 numpy
+boto3
+lxml
