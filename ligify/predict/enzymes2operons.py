@@ -11,10 +11,6 @@ from utils import make_request  # Assuming make_request uses a persistent sessio
 session = requests.Session()
 session.headers.update({"User-Agent": "my-bioinfo-app/1.0"})
 
-# If your make_request wrapper now returns a requests.Response but uses the session internally,
-# you might want to unify all external calls through it for uniform timing and reuse.
-# For example, replace direct requests.get() calls with make_request if it uses `session` internally.
-
 @lru_cache(maxsize=None)
 def fetch_uniprot_json(query_url: str):
     # A cached fetch function for Uniprot responses
@@ -24,14 +20,13 @@ def fetch_uniprot_json(query_url: str):
 
 @lru_cache(maxsize=None)
 def fetch_protein_fasta(accession: str):
-    # Use make_request for NCBI calls since you have rate limit logic there
     URL = (
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi/?db=protein&id="
         + accession
         + "&rettype=fasta"
         + f"&api_key={os.getenv('NcbiApiKey')}"
     )
-    resp = make_request("GET", URL)  # ensure make_request uses the shared session if possible
+    resp = make_request("GET", URL)  
     resp.raise_for_status()
     seq = "".join(line for line in resp.text.split("\n")[1:])
     return seq

@@ -25,7 +25,7 @@ def fetch_reactions(InChiKey: str, max_reactions: int):
         output = {}
         output["rxn_data"] = [
             {"rhea_id": i["id"], "equation": i["equation"]} for i in data
-        ]
+        ][0:max_reactions]
 
         return output
     else:
@@ -34,9 +34,9 @@ def fetch_reactions(InChiKey: str, max_reactions: int):
 
 def fetch_genes(rhea_id, reviewed_bool, proteins_per_reaction):
     if reviewed_bool:
-        url = f"https://rest.uniprot.org/uniprotkb/search?format=json&query=reviewed:true+AND+rhea:"
+        url = f"https://rest.uniprot.org/uniprotkb/search?format=json&size={proteins_per_reaction}&query=reviewed:true+AND+rhea:"
     else:
-        url = f"https://rest.uniprot.org/uniprotkb/search?format=json&query=reviewed:false+AND+rhea:"
+        url = f"https://rest.uniprot.org/uniprotkb/search?format=json&size={proteins_per_reaction}&query=reviewed:false+AND+rhea:"
 
     # Loop through all RHEA reactions associated with the input chemical.
 
