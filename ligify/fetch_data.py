@@ -36,8 +36,6 @@ def fetch_data(InChiKey, filters):
     total_rxns = len(reactions["rxn_data"])
     metrics["RHEA Reactions"] = total_rxns
     
-    print(len(reactions["rxn_data"]) == 0)
-
     if total_rxns > 0:
         # FETCH GENES
         counter = 0
