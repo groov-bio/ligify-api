@@ -1,8 +1,13 @@
-import json
 import os
-import requests
 import re
-import xmltodict
+from lxml import etree
+from typing import Dict, Any, Optional
+import io
+from concurrent.futures import ThreadPoolExecutor
+from itertools import islice
+
+
+from utils import make_request
 
 # TODO:
 # Return a legit error message for the frontend if an error comes up
@@ -20,12 +25,21 @@ import xmltodict
 #         genome = response.text.split("\n")
 #         return genome
 
+def chunk_iterator(iterable, size):
+    iterator = iter(iterable)
+    return iter(lambda: list(islice(iterator, size)), [])
+
+def process_chunk(ids_chunk):
+    results = {}
+    for id in ids_chunk:
+        results[id] = acc2MetaData(id)
+    return results
 
 def NC2genome(genome_id, operon):
     base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&api_key={os.getenv('NcbiApiKey')}"
     startPos = operon[0]["start"]
     stopPos = operon[-1]["stop"]
-    response = requests.get(
+    response = make_request("GET",         
         base_url
         + "&id="
         + str(genome_id)
@@ -34,7 +48,17 @@ def NC2genome(genome_id, operon):
         + "&seq_stop="
         + str(stopPos)
         + "&rettype=fasta"
-    )
+                 )
+    # response = requests.get(
+    #     base_url
+    #     + "&id="
+    #     + str(genome_id)
+    #     + "&seq_start="
+    #     + str(startPos)
+    #     + "&seq_stop="
+    #     + str(stopPos)
+    #     + "&rettype=fasta"
+    # )
 
     if response.ok:
         genome = response.text.split("\n")
@@ -144,56 +168,48 @@ def NC2genome(genome_id, operon):
 
 
 def getGenes(genome_id, startPos, stopPos):
-    # Fetch the genome fragment
     base_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&api_key={os.getenv('NcbiApiKey')}"
+
     try:
-        response = requests.get(
+        response = make_request(
+            "GET",
             base_url
-            + "&id="
-            + str(genome_id)
-            + "&seq_start="
-            + str(startPos - 10000)
-            + "&seq_stop="
-            + str(stopPos + 10000)
+            + "&id=" + str(genome_id)
+            + "&seq_start=" + str(startPos - 10000)
+            + "&seq_stop=" + str(stopPos + 10000)
             + "&rettype=fasta_cds_aa"
         )
         genome = response.text.split("\n")
     except Exception:
         try:
-            response = requests.get(
+            response = make_request(
+                "GET",
                 base_url
-                + "&id="
-                + str(genome_id)
-                + "&seq_start="
-                + str(startPos - 5000)
-                + "&seq_stop="
-                + str(stopPos + 5000)
+                + "&id=" + str(genome_id)
+                + "&seq_start=" + str(startPos - 5000)
+                + "&seq_stop=" + str(stopPos + 5000)
                 + "&rettype=fasta_cds_aa"
             )
             genome = response.text.split("\n")
         except Exception:
             try:
-                response = requests.get(
+                response = make_request(
+                    "GET",
                     base_url
-                    + "&id="
-                    + str(genome_id)
-                    + "&seq_start="
-                    + str(startPos)
-                    + "&seq_stop="
-                    + str(stopPos + 5000)
+                    + "&id=" + str(genome_id)
+                    + "&seq_start=" + str(startPos)
+                    + "&seq_stop=" + str(stopPos + 5000)
                     + "&rettype=fasta_cds_aa"
                 )
                 genome = response.text.split("\n")
             except Exception:
                 try:
-                    response = requests.get(
+                    response = make_request(
+                        "GET",
                         base_url
-                        + "&id="
-                        + str(genome_id)
-                        + "&seq_start="
-                        + str(startPos - 5000)
-                        + "&seq_stop="
-                        + str(stopPos)
+                        + "&id=" + str(genome_id)
+                        + "&seq_start=" + str(startPos - 5000)
+                        + "&seq_stop=" + str(stopPos)
                         + "&rettype=fasta_cds_aa"
                     )
                     genome = response.text.split("\n")
@@ -406,7 +422,8 @@ def predict_promoter(operon, regIndex, genome_id):
         + "&strand=1&rettype=fasta"
         + f"&api_key={os.getenv('NcbiApiKey')}"
     )
-    response = requests.get(URL)
+    response = make_request("GET", URL)
+    # response = requests.get(URL)
 
     if response.ok:
         intergenic = response.text
@@ -431,124 +448,149 @@ def predict_promoter(operon, regIndex, genome_id):
         # A region too long makes analysis fuzzy and less accurate.
 
 
-def acc2MetaDataList(access_ids):
+def acc2MetaDataList(access_ids: Dict[str, Any]) -> Dict[str, Any]:
     base_url = (
         f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&rettype=ipg&api_key={os.getenv('NcbiApiKey')}"
     )
-    id_list = list(access_ids.keys())
-    for id in id_list:
-        access_ids[id] = None  # Initialize to None
-        base_url += f"&id={id}"
+    
+    # Pre-initialize results dictionary
+    results = {id: None for id in access_ids}
+    
+    # Build URL
+    url = base_url + '&' + '&'.join(f"id={id}" for id in access_ids)
 
-    result = requests.get(base_url)
-    if result.status_code != 200:
-        print("non-200 HTTP response. eFetch failed")
-        print(f"Status Code: {result.status_code}")
-        print(f"Reason: {result.reason}")
-        print(f"Response Text: {result.text}")
-        print(f"Response Headers: {result.headers}")
-        print("non-200 HTTP response. eFetch failed")
-        return access_ids  # Return early if the request fails
+    response = make_request("GET", url)
+    if response.status_code != 200:
+        print(f"non-200 HTTP response. eFetch failed: {response.status_code} - {response.reason}")
+        return results
 
-    parsed = xmltodict.parse(result.text)
+    try:
+        # Set up iterative parser
+        context = etree.iterparse(
+            io.BytesIO(response.content),
+            events=('end',),
+            tag='{*}IPGReport',  # Handle potential namespaces
+            recover=True  # Continue parsing even if there are errors
+        )
 
-    if "IPGReport" in parsed["IPGReportSet"].keys():
-        # Ensure IPGReport is a list
-        ipg_reports = parsed["IPGReportSet"]["IPGReport"]
-        if not isinstance(ipg_reports, list):
-            ipg_reports = [ipg_reports]
+        # Track processed IDs for fallback handling
+        processed_ids = set()
 
-        ids_set_to_none = set()
-
-        for entry in ipg_reports:
-            input_acc = entry.get("@product_acc")
-            if not input_acc:
-                # Cannot tie back to access_ids
-                print("No '@product_acc' in entry, cannot tie back to access_ids")
-                continue
-
-            id = input_acc
-
-            if "ProteinList" in entry:
-                protein = entry["ProteinList"]["Protein"]
-                if isinstance(protein, list):
-                    protein = protein[0]
-
-                if "CDSList" not in protein:
-                    access_ids[id] = None  # Explicitly set to None
-                    ids_set_to_none.add(id)
+        # Process XML stream
+        for _, elem in context:
+            try:
+                product_acc = elem.get('product_acc')
+                if not product_acc:
                     continue
 
-                CDS = protein["CDSList"]["CDS"]
-                if isinstance(CDS, list):
-                    CDS = CDS[0]
+                processed_ids.add(product_acc)
+                
+                # Use XPath for efficient element location
+                cds = elem.xpath('.//CDS[1]')  # Get first CDS element
+                if cds:
+                    cds = cds[0]
+                    results[product_acc] = {
+                        'accver': cds.get('accver'),
+                        'start': cds.get('start'),
+                        'stop': cds.get('stop'),
+                        'strand': cds.get('strand')
+                    }
 
-                proteinDict = {
-                    "accver": CDS["@accver"],
-                    "start": CDS["@start"],
-                    "stop": CDS["@stop"],
-                    "strand": CDS["@strand"],
-                }
-                access_ids[id] = proteinDict
-            else:
-                access_ids[id] = None  # Explicitly set to None
-                ids_set_to_none.add(id)
-    else:
-        # Handle error if IPGReport is missing
-        raise Exception("No IPGReport in response")
+            except Exception as e:
+                print(f"Error processing element: {e}")
+                continue
+            finally:
+                # Clear element and its parents to free memory
+                elem.clear()
+                while elem.getprevious() is not None:
+                    del elem.getparent()[0]
 
-    # Fallback for IDs not explicitly set to None
-    for id in access_ids:
-        if access_ids[id] is None and id not in ids_set_to_none:
-            # Use the fallback function
-            access_ids[id] = acc2MetaData(id)
+        # Handle unprocessed IDs using parallel processing
+        unprocessed_ids = set(access_ids.keys()) - processed_ids
+        if unprocessed_ids:
+            # Process unprocessed IDs in chunks
+            chunk_size = 50  # Adjust based on your needs
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = []
+                for chunk in chunk_iterator(unprocessed_ids, chunk_size):
+                    futures.append(executor.submit(process_chunk, chunk))
+                
+                # Collect results
+                for future in futures:
+                    chunk_results = future.result()
+                    results.update(chunk_results)
 
-    return access_ids
+    except etree.ParseError as e:
+        print(f"XML parsing error: {e}")
+    except Exception as e:
+        print(f"Unexpected error during XML processing: {e}")
+
+    return results
 
 
-def acc2MetaData(access_id: str):
-    result = requests.get(
-        f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NcbiApiKey')}"
-    )
-    if result.status_code != 200:
-        print(f"Status Code: {result.status_code}")
-        print(f"Reason: {result.reason}")
-        print(f"Response Text: {result.text}")
-        print(f"Response Headers: {result.headers}")
-        print("non-200 HTTP response. eFetch failed")
-        return None  # Return None on failure
-
-    parsed = xmltodict.parse(result.text)
-
-    if "IPGReport" in parsed["IPGReportSet"].keys():
-        if "ProteinList" in parsed["IPGReportSet"]["IPGReport"]:
-            protein = parsed["IPGReportSet"]["IPGReport"]["ProteinList"]["Protein"]
-
-            if isinstance(protein, list):
-                protein = protein[0]
-
-            if "CDSList" not in protein:
-                return None  # Return None if no CDSList
-
-            CDS = protein["CDSList"]["CDS"]
-
-            # CDS is a list if there is more than 1 CDS returned, otherwise it's a dictionary
-            if isinstance(CDS, list):
-                CDS = CDS[0]
-
-            proteinDict = {
-                "accver": CDS["@accver"],
-                "start": CDS["@start"],
-                "stop": CDS["@stop"],
-                "strand": CDS["@strand"],
-            }
-
-            return proteinDict
-        else:
+def acc2MetaData(access_id: str) -> Optional[Dict[str, str]]:
+    """
+    Fetch and parse metadata for a single protein accession ID.
+    
+    Args:
+        access_id: The protein accession ID to query
+        
+    Returns:
+        Dictionary containing protein metadata or None if not found/error
+    """
+    url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={access_id}&rettype=ipg&api_key={os.getenv('NcbiApiKey')}"
+    
+    try:
+        result = make_request("GET", url)
+        if result.status_code != 200:
+            print(f"Request failed: {result.status_code} - {result.reason}")
             return None
-    else:
+
+        # Create parser with optimized settings
+        parser = etree.XMLParser(
+            remove_blank_text=True,
+            remove_comments=True,
+            remove_pis=True,
+            huge_tree=True,
+            collect_ids=False,
+            recover=True
+        )
+
+        # Parse XML directly from response content
+        tree = etree.fromstring(result.content, parser=parser)
+
+        # Use XPath to efficiently find the first CDS element
+        cds = tree.xpath('//CDS[1]')
+        if not cds:
+            return None
+
+        cds = cds[0]
+        
+        # Extract metadata
+        protein_dict = {
+            "accver": cds.get("accver"),
+            "start": cds.get("start"),
+            "stop": cds.get("stop"),
+            "strand": cds.get("strand")
+        }
+
+        # Validate required fields
+        if all(protein_dict.values()):
+            return protein_dict
         return None
 
+    except etree.ParseError as e:
+        print(f"XML parsing error for {access_id}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error processing {access_id}: {e}")
+        return None
+    finally:
+        # Ensure proper cleanup
+        try:
+            del tree
+        except:
+            pass
 
 
 def acc2OperonList(operon_list_entries):

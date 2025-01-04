@@ -64,20 +64,18 @@ class InputSchema(Schema):
 
 def lambda_handler(event, context):
 
-    print("Received event:", json.dumps(event))
-
     # Extract path and method from the event
     path = event.get('rawPath') or event.get('path')
     method = event.get('httpMethod', '').upper()
-    print(f"Method: {method}, Path: {path}")  # Log the method and path
+    origin = event.get('headers', {}).get('Origin', None)
 
     # Adjust path validation
     if not path or '/ligify' not in path:
-        return generate_response(403, "Forbidden")
+        return generate_response(403, "Forbidden", origin=origin)
 
     # Handle CORS preflight request
     if method == 'OPTIONS':
-        return generate_response(200, "", is_options=True)
+        return generate_response(200, "", origin=origin, is_options=True)
 
     # Load environment variables
     load_dotenv()
@@ -88,7 +86,8 @@ def lambda_handler(event, context):
     except json.JSONDecodeError:
         return generate_response(
             400,
-            {"message": "Invalid JSON in request body."}
+            {"message": "Invalid JSON in request body."},
+            origin=origin
         )
 
     input_schema = InputSchema()
@@ -99,7 +98,8 @@ def lambda_handler(event, context):
         print("Validation error:", e)
         return generate_response(
             400,
-            {"message": e.messages}
+            {"message": e.messages},
+            origin=origin
         )
 
     # Process the request
@@ -120,30 +120,19 @@ def lambda_handler(event, context):
             "regulators": regulators
         }
 
-        return generate_response(200, response_body)
+        return generate_response(200, response_body, origin=origin)
     except Exception as e:
         print("Internal server error:", e)
         return generate_response(
             500,
-            {"message": "Internal Server Error"}
+            {"message": "Internal Server Error"},
+            origin=origin
         )
 
 
-def create_plasmid(regulators, chemical):
-    for regulator in regulators:
-        result = create_genbank(
-            regulator["refseq"],
-            chemical,
-            regulator["protein"]["context"]["promoter"]["regulated_seq"],
-            regulator["reg_protein_seq"],
-        )
-        regulator["plasmid_sequence"] = str(result)
-    return regulators
-
-
-def generate_response(status_code, body, is_options=False):
+def generate_response(status_code, body, is_options=False, origin=None):
     headers = {
-        "Access-Control-Allow-Origin": "http://localhost:3001",
+        "Access-Control-Allow-Origin": origin if origin else "http://localhost:3001",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Credentials": "true"

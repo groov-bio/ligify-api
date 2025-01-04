@@ -41,7 +41,7 @@ def fetch_genes(rhea_id, reviewed_bool, proteins_per_reaction):
     # Loop through all RHEA reactions associated with the input chemical.
 
     response = requests.get(url + str(rhea_id))
-
+    
     if response.ok:
         data = json.loads(response.text)["results"]
 

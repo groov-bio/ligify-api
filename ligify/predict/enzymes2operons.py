@@ -1,123 +1,103 @@
 import json
 import os
 import re
+import time
 import requests
+from functools import lru_cache
 
+from utils import make_request  # Assuming make_request uses a persistent session and rate limiting
 
-def protein2chemicals(accession: str):
-    url = (
-        "https://rest.uniprot.org/uniprotkb/search?query=" + accession + "&format=json"
-    )
+# Create a global session for all external requests
+session = requests.Session()
+session.headers.update({"User-Agent": "my-bioinfo-app/1.0"})
 
-    response = requests.get(url)
-    if response.ok:
-        protein = json.loads(response.text)
+@lru_cache(maxsize=None)
+def fetch_uniprot_json(query_url: str):
+    # A cached fetch function for Uniprot responses
+    resp = session.get(query_url)
+    resp.raise_for_status()
+    return resp.json()
 
-        if len(protein["results"]) > 0:
-            if "comments" in protein["results"][0]:
-                protein = protein["results"][0]["comments"]
-
-                protein_data = {}
-
-                # look for description
-                response_function = [
-                    i["texts"][0]["value"]
-                    for i in protein
-                    if i["commentType"] == "FUNCTION"
-                ]
-                if len(response_function) != 0:
-                    protein_data["function"] = response_function[0]
-
-                    # look for catalytic activity
-                catalysis = [
-                    i["reaction"]["name"]
-                    for i in protein
-                    if i["commentType"] == "CATALYTIC ACTIVITY"
-                ]
-                if len(catalysis) != 0:
-                    protein_data["catalysis"] = catalysis[0]
-
-                    # look for ligands
-                try:
-                    reaction = [
-                        i["reaction"]["reactionCrossReferences"]
-                        for i in protein
-                        if i["commentType"] == "CATALYTIC ACTIVITY"
-                    ]
-                    if len(reaction) != 0:
-                        LIGANDS = [
-                            i["id"] for i in reaction[0] if i["database"] == "ChEBI"
-                        ]
-                        if len(LIGANDS) != 0:
-                            protein_data["ligands"] = LIGANDS
-                except Exception:
-                    pass
-
-                    # look for induction
-                induction = [
-                    i["texts"][0]["value"]
-                    for i in protein
-                    if i["commentType"] == "INDUCTION"
-                ]
-                if len(induction) != 0:
-                    protein_data["induction"] = induction[0]
-
-                    # look for induction
-                pathway = [
-                    i["texts"][0]["value"]
-                    for i in protein
-                    if i["commentType"] == "PATHWAY"
-                ]
-                if len(pathway) != 0:
-                    protein_data["pathway"] = pathway[0]
-
-                # add something to append all this metadata
-
-                return protein_data
-    else:
-        response.raise_for_status()
-
-
-def fetch_reg_protein_seq(accession: str):
+@lru_cache(maxsize=None)
+def fetch_protein_fasta(accession: str):
     URL = (
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi/?db=protein&id="
         + accession
         + "&rettype=fasta"
         + f"&api_key={os.getenv('NcbiApiKey')}"
     )
-    response = requests.get(URL)
-    if response.ok:
-        seq = "".join(i for i in response.text.split("\n")[1:])
-        return seq
-    else:
-        print("Bad eFetch request " + str(response.status_code))
+    resp = make_request("GET", URL)  
+    resp.raise_for_status()
+    seq = "".join(line for line in resp.text.split("\n")[1:])
+    return seq
+
+def protein2chemicals(accession: str):
+    url = "https://rest.uniprot.org/uniprotkb/search?query=" + accession + "&format=json"
+    try:
+        protein = fetch_uniprot_json(url)
+    except Exception:
         return None
 
+    if len(protein.get("results", [])) > 0:
+        protein_comments = protein["results"][0].get("comments", [])
+        protein_data = {}
 
+        # Extract various data from the comments
+        response_function = [c["texts"][0]["value"] for c in protein_comments if c["commentType"] == "FUNCTION"]
+        if response_function:
+            protein_data["function"] = response_function[0]
+
+        catalysis = [c["reaction"]["name"] for c in protein_comments if c["commentType"] == "CATALYTIC ACTIVITY"]
+        if catalysis:
+            protein_data["catalysis"] = catalysis[0]
+
+        # Attempt to fetch ligands
+        try:
+            reaction = [
+                c["reaction"]["reactionCrossReferences"] 
+                for c in protein_comments if c["commentType"] == "CATALYTIC ACTIVITY"
+            ]
+            if reaction:
+                LIGANDS = [r["id"] for r in reaction[0] if r["database"] == "ChEBI"]
+                if LIGANDS:
+                    protein_data["ligands"] = LIGANDS
+        except Exception:
+            pass
+
+        induction = [c["texts"][0]["value"] for c in protein_comments if c["commentType"] == "INDUCTION"]
+        if induction:
+            protein_data["induction"] = induction[0]
+
+        pathway = [c["texts"][0]["value"] for c in protein_comments if c["commentType"] == "PATHWAY"]
+        if pathway:
+            protein_data["pathway"] = pathway[0]
+
+        return protein_data
+    return None
+
+@lru_cache(maxsize=None)
 def fetch_uniprot_reg_data(accession: str):
-    url = (
-        "https://rest.uniprot.org/uniprotkb/search?query=" + accession + "&format=json"
-    )
-    response = requests.get(url)
-
+    url = "https://rest.uniprot.org/uniprotkb/search?query=" + accession + "&format=json"
     try:
-        data = json.loads(response.text)["results"][0]
-
+        data = fetch_uniprot_json(url)["results"][0]
         dois = []
-        for j in data["references"]:
+        for j in data.get("references", []):
+            doi = None
+            title = None
             if "citationCrossReferences" in j["citation"]:
                 for k in j["citation"]["citationCrossReferences"]:
                     if k["database"] == "DOI":
                         doi = k["id"]
                         title = j["citation"]["title"]
                         break
-                dois.append({"doi": doi, "title": title})
+                if doi and title:
+                    dois.append({"doi": doi, "title": title})
 
         regulator = {
-            "annotation": data["features"][0]["description"],
+            "annotation": data["features"][0]["description"] if data.get("features") else "No data available",
             "id": data["primaryAccession"],
-            "references": dois,
-            "length": data["sequence"]["length"],
+            "references": dois if dois else "No data available",
+            "length": data["sequence"]["length"] if data.get("sequence") else "No data available",
         }
     except Exception:
         regulator = {
@@ -129,130 +109,118 @@ def fetch_uniprot_reg_data(accession: str):
 
     return regulator
 
-
 def pull_regulators(protein, rxn):
-    regulator = re.compile(r"regulator|repressor|activator")
+    regulator_pattern = re.compile(r"regulator|repressor|activator")
 
     reg_data = []
-
     ligand_names = []
-    if "context" in protein.keys():
-        if protein["context"] != "EMPTY":
-            operon = protein["context"]["operon"]
-            for gene in operon:
-                if "description" in gene.keys():
-                    if regulator.search(gene["description"]):
-                        entry = {
-                            "refseq": gene["accession"],
-                            "annotation": gene["description"],
-                            "protein": protein,
-                            "equation": rxn["equation"],
-                            "rhea_id": rxn["rhea_id"],
-                        }
 
-                        ### This is where a Uniprot API query goes to fetch more info on the regulator.
-                        entry["uniprot_reg_data"] = fetch_uniprot_reg_data(
-                            gene["accession"]
-                        )
+    # Cache or store operon calls if same operon is processed multiple times
+    if protein.get("context", "EMPTY") != "EMPTY":
+        operon = protein["context"]["operon"]
+        # Pre-fetch all sequences and data for operon genes if possible
+        # This reduces repeated calls in a loop
 
-                        ### NCBI is queried for more info on the regulator.
-                        # This is a fail-safe, since sometimes no Uniprot ID is associated with the RefSeq identifier
-                        entry["reg_protein_seq"] = fetch_reg_protein_seq(
-                            gene["accession"]
-                        )
+        for gene in operon:
+            if "description" in gene and regulator_pattern.search(gene["description"]):
+                entry = {
+                    "refseq": gene["accession"],
+                    "annotation": gene["description"],
+                    "protein": protein,
+                    "equation": rxn["equation"],
+                    "rhea_id": rxn["rhea_id"],
+                }
 
-                        # Fetch possible alternative inducer molecules associated with the operon
+                # Fetch possible alternative inducer molecules associated with the operon
+                ligand_ids = []
+                for gene in operon:
+                    protein_data = protein2chemicals(gene["accession"])
+                    if isinstance(protein_data, dict):
+                        if "ligands" in protein_data.keys():
+                            for l in protein_data['ligands']:
+                                ligand_ids.append(l)
+                unique_ligand_ids = list(set(ligand_ids))
+                # Blacklisted ligands
+                not_ligand_ids = [
+                    "CHEBI:15378",    # H(+)
+                    "CHEBI:15377",    # H2O
+                    "CHEBI:16474",    # NADPH
+                    "CHEBI:16908",    # NADH
+                    "CHEBI:57945",    # NADH(-2)
+                    "CHEBI:57540",    # NAD(-1)
+                    "CHEBI:18009",    # NADP(+)
+                    "CHEBI:15846",    # NAD(+)
+                    "CHEBI:58349",    # NADP
+                    "CHEBI:57783"     # NADPH(-4)
+                ]
+                unique_ligand_ids = [
+                    i for i in unique_ligand_ids if i not in not_ligand_ids
+                ]
 
+                # function to get name and smiles
+                def get_smiles_and_name(input):
+                    URL = (
+                        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"
+                        + str(input)
+                        + "/property/IsomericSMILES,IUPACName/JSON"
+                    )
+                    response = requests.get(URL)
+                    if response.ok:
+                        data = json.loads(response.text)
+                        name = data["PropertyTable"]["Properties"][0]["IUPACName"]
+                        smiles = data["PropertyTable"]["Properties"][0]["IsomericSMILES"]
 
+                        return {"name":name, "smiles":smiles}
 
-
-
-                        # Fetch possible alternative inducer molecules associated with the operon
-                        ligand_ids = []
-                        for gene in operon:
-                            protein_data = protein2chemicals(gene["accession"])
-                            if isinstance(protein_data, dict):
-                                if "ligands" in protein_data.keys():
-                                    for l in protein_data['ligands']:
-                                        ligand_ids.append(l)
-                        unique_ligand_ids = list(set(ligand_ids))
-                        # Blacklisted ligands
-                        not_ligand_ids = [
-                            "CHEBI:15378",    # H(+)
-                            "CHEBI:15377",    # H2O
-                            "CHEBI:16474",    # NADPH
-                            "CHEBI:16908",    # NADH
-                            "CHEBI:57945",    # NADH(-2)
-                            "CHEBI:57540",    # NAD(-1)
-                            "CHEBI:18009",    # NADP(+)
-                            "CHEBI:15846",    # NAD(+)
-                            "CHEBI:58349",    # NADP
-                            "CHEBI:57783"     # NADPH(-4)
-                        ]
-                        unique_ligand_ids = [
-                            i for i in unique_ligand_ids if i not in not_ligand_ids
-                        ]
-
-                        # function to get name and smiles
-                        def get_smiles_and_name(input):
-                            URL = (
-                                "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"
-                                + str(input)
-                                + "/property/IsomericSMILES,IUPACName/JSON"
-                            )
-                            response = requests.get(URL)
-                            if response.ok:
-                                data = json.loads(response.text)
-                                name = data["PropertyTable"]["Properties"][0]["IUPACName"]
-                                smiles = data["PropertyTable"]["Properties"][0]["IsomericSMILES"]
-
-                                return {"name":name, "smiles":smiles}
-
-                        ligands = []
-                        for i in unique_ligand_ids:
-                            ligands.append(get_smiles_and_name(i))
+                ligands = []
+                for i in unique_ligand_ids:
+                    ligands.append(get_smiles_and_name(i))
 
 
-                        entry["candidate_ligands"] = ligands
+                entry["candidate_ligands"] = ligands
+                
+                for gene in operon:
+                    protein_data = protein2chemicals(gene["accession"])
+                    if isinstance(protein_data, dict):
+                        if "catalysis" in protein_data.keys():
+                            ligand_names += protein_data["catalysis"].split(" ")
+                unique_ligands = list(set(ligand_names))
+                # Blacklisted ligands
+                not_ligands = [
+                    "H2O",
+                    "+",
+                    "-",
+                    "=",
+                    "A",
+                    "AH2",
+                    "H(+)",
+                    "NADPH",
+                    "NADH",
+                    "NADP(+)",
+                    "NAD(+)",
+                    "2",
+                    "H(+)in",
+                    "H(+)out",
+                ]
+                unique_ligands = [
+                    i for i in unique_ligands if i not in not_ligands
+                ]
 
+                # NCBI seq (cached)
+                entry["reg_protein_seq"] = fetch_protein_fasta(gene["accession"])
 
+                # Protein2chemicals (cached)
+                # Try to gather info for all genes first, then process?
+                protein_data = protein2chemicals(gene["accession"])
+                if isinstance(protein_data, dict) and "catalysis" in protein_data:
+                    ligand_names += protein_data["catalysis"].split(" ")
 
+                # Filter ligands
+                not_ligands = {"H2O", "+", "-", "=", "A", "AH2", "H(+)", "NADPH", "NADH", "NADP(+)", "NAD(+)", "2", "H(+)in", "H(+)out"}
+                unique_ligands = [i for i in set(ligand_names) if i not in not_ligands]
+                entry["alt_ligands"] = unique_ligands
 
-
-
-
-
-
-                        for gene in operon:
-                            protein_data = protein2chemicals(gene["accession"])
-                            if isinstance(protein_data, dict):
-                                if "catalysis" in protein_data.keys():
-                                    ligand_names += protein_data["catalysis"].split(" ")
-                        unique_ligands = list(set(ligand_names))
-                        # Blacklisted ligands
-                        not_ligands = [
-                            "H2O",
-                            "+",
-                            "-",
-                            "=",
-                            "A",
-                            "AH2",
-                            "H(+)",
-                            "NADPH",
-                            "NADH",
-                            "NADP(+)",
-                            "NAD(+)",
-                            "2",
-                            "H(+)in",
-                            "H(+)out",
-                        ]
-                        unique_ligands = [
-                            i for i in unique_ligands if i not in not_ligands
-                        ]
-
-                        entry["alt_ligands"] = unique_ligands
-
-                        reg_data.append(entry)
+                reg_data.append(entry)
 
     return reg_data
 

@@ -1,4 +1,6 @@
-from collections import defaultdict
+from collections import defaultdict, deque
+import threading
+import time
 import requests
 
 class APITracker:
@@ -30,3 +32,22 @@ class APITracker:
         }
 
 tracker = APITracker()
+
+# Global session (persistent)
+session = requests.Session()
+session.headers.update({
+    "User-Agent": "ligify-agent/1.0",
+    # Include any other headers you may need globally
+})
+
+# Desired rate limit: 9 requests/second means ~0.111s between requests.
+# We'll pick 0.12s to be safe. Adjust if needed.
+RATE_LIMIT_INTERVAL = 0.12
+
+def make_request(method, url, **kwargs):
+    # Perform the request using the persistent session
+    resp = session.request(method, url, **kwargs)
+
+    time.sleep(RATE_LIMIT_INTERVAL)
+
+    return resp
