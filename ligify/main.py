@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import json
 
 from fetch_data import fetch_data
-from genbank.create_genbank import create_genbank
+from genbank.create_genbank import create_plasmid
 from predict.pubchem import get_inchikey, get_name
 
 from marshmallow import Schema, fields, ValidationError, validate
@@ -63,6 +63,7 @@ class InputSchema(Schema):
 
 
 def lambda_handler(event, context):
+
     print("Received event:", json.dumps(event))
 
     # Extract path and method from the event

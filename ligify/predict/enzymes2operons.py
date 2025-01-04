@@ -162,6 +162,67 @@ def pull_regulators(protein, rxn):
                         )
 
                         # Fetch possible alternative inducer molecules associated with the operon
+
+
+
+
+
+                        # Fetch possible alternative inducer molecules associated with the operon
+                        ligand_ids = []
+                        for gene in operon:
+                            protein_data = protein2chemicals(gene["accession"])
+                            if isinstance(protein_data, dict):
+                                if "ligands" in protein_data.keys():
+                                    for l in protein_data['ligands']:
+                                        ligand_ids.append(l)
+                        unique_ligand_ids = list(set(ligand_ids))
+                        # Blacklisted ligands
+                        not_ligand_ids = [
+                            "CHEBI:15378",    # H(+)
+                            "CHEBI:15377",    # H2O
+                            "CHEBI:16474",    # NADPH
+                            "CHEBI:16908",    # NADH
+                            "CHEBI:57945",    # NADH(-2)
+                            "CHEBI:57540",    # NAD(-1)
+                            "CHEBI:18009",    # NADP(+)
+                            "CHEBI:15846",    # NAD(+)
+                            "CHEBI:58349",    # NADP
+                            "CHEBI:57783"     # NADPH(-4)
+                        ]
+                        unique_ligand_ids = [
+                            i for i in unique_ligand_ids if i not in not_ligand_ids
+                        ]
+
+                        # function to get name and smiles
+                        def get_smiles_and_name(input):
+                            URL = (
+                                "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"
+                                + str(input)
+                                + "/property/IsomericSMILES,IUPACName/JSON"
+                            )
+                            response = requests.get(URL)
+                            if response.ok:
+                                data = json.loads(response.text)
+                                name = data["PropertyTable"]["Properties"][0]["IUPACName"]
+                                smiles = data["PropertyTable"]["Properties"][0]["IsomericSMILES"]
+
+                                return {"name":name, "smiles":smiles}
+
+                        ligands = []
+                        for i in unique_ligand_ids:
+                            ligands.append(get_smiles_and_name(i))
+
+
+                        entry["candidate_ligands"] = ligands
+
+
+
+
+
+
+
+
+
                         for gene in operon:
                             protein_data = protein2chemicals(gene["accession"])
                             if isinstance(protein_data, dict):
@@ -197,4 +258,22 @@ def pull_regulators(protein, rxn):
 
 
 if __name__ == "__main__":
-    pass
+    
+
+    # function to get name and smiles
+    def get_smiles_and_name(input):
+        URL = (
+            "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"
+            + str(input)
+            + "/property/IsomericSMILES,IUPACName/JSON"
+        )
+        response = requests.get(URL)
+        if response.ok:
+            data = json.loads(response.text)
+            name = data["PropertyTable"]["Properties"][0]["IUPACName"]
+            smiles = data["PropertyTable"]["Properties"][0]["IsomericSMILES"]
+
+            return {"name":name, "smiles":smiles}
+
+
+    print(get_smiles_and_name("CHEBI:15378"))
