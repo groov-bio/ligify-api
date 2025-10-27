@@ -1,3 +1,7 @@
+# Archive Update
+
+This project is no longer required. All the computation that it helped derive has been pre-computed and served up via static data. Thus, the project is no longer needed.
+
 # Ligify
 This repo focuses on predicting protein-ligand interactions and providing a publically available service to work with this prediction algorithm.
 
