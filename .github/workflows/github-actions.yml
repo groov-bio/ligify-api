@@ -1,38 +1,38 @@
-name: Deploy SAM Application
+# name: Deploy SAM Application
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.11'
+#     - name: Set up Python
+#       uses: actions/setup-python@v3
+#       with:
+#         python-version: '3.11'
 
-    - name: Setup SAM
-      uses: aws-actions/setup-sam@v2
-      with:
-        use-installer: true
+#     - name: Setup SAM
+#       uses: aws-actions/setup-sam@v2
+#       with:
+#         use-installer: true
     
-    - name: Configure Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
+#     - name: Configure Credentials
+#       uses: aws-actions/configure-aws-credentials@v4
+#       with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: us-east-2
 
-    - name: Sam Build
-      run: sam build --use-container --container-env-var NcbiApiKey="${{ secrets.ncbiapikey }}"
+#     - name: Sam Build
+#       run: sam build --use-container --container-env-var NcbiApiKey="${{ secrets.ncbiapikey }}"
 
-    - name: Deploy SAM application
-      run: |
-        sam deploy --stack-name ligify-api --resolve-s3 --capabilities CAPABILITY_IAM --resolve-image-repos --parameter-overrides NcbiApiKey="${{ secrets.ncbiapikey }}" --no-confirm-changeset --no-fail-on-empty-changeset
+#     - name: Deploy SAM application
+#       run: |
+#         sam deploy --stack-name ligify-api --resolve-s3 --capabilities CAPABILITY_IAM --resolve-image-repos --parameter-overrides NcbiApiKey="${{ secrets.ncbiapikey }}" --no-confirm-changeset --no-fail-on-empty-changeset
